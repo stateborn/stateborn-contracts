@@ -3,9 +3,9 @@
 //
 //import "@openzeppelin/contracts/governance/TimelockController.sol";
 //
-//contract DaoTimelockController is TimelockController {
+//contract UserDisputerTimelockController is TimelockController {
 //    constructor(uint256 minDelay, address[] memory proposers, address[] memory executors, address admin)
-//    TimelockController(1, new address[](0x68715908018fdcC7135F6cB66B2BecA376efd4Eb), new address[](0x68715908018fdcC7135F6cB66B2BecA376efd4Eb), 0x68715908018fdcC7135F6cB66B2BecA376efd4Eb)
+//        TimelockController(1, new address[](0x68715908018fdcC7135F6cB66B2BecA376efd4Eb), new address[](0x68715908018fdcC7135F6cB66B2BecA376efd4Eb), 0x68715908018fdcC7135F6cB66B2BecA376efd4Eb)
 //    {
 //    }
 //}

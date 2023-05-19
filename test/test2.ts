@@ -1,22 +1,19 @@
+import { address } from 'hardhat/internal/core/config/config-validation';
+
 const keccak256 = require('keccak256')
 import { MerkleTree } from 'merkletreejs'
 import { ethers } from 'hardhat';
 
 const { expect } = require("chai");
-
-const userVote = {
-    votingPower: 80,
-    decision: true,
-}
-
-const userVote2 = {
-    votingPower: 100,
-    decision: true,
-}
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 const votingCard1 = {
     votingCard: {
-        userVote: userVote,
+        userVote: {
+            votingPower: 80,
+            decision: true,
+        }
+        ,
         signature: 'undefined',
         finalVotingPower: 80,
     },
@@ -25,7 +22,10 @@ const votingCard1 = {
 
 const votingCard2 = {
     votingCard: {
-        userVote: userVote2,
+        userVote: {
+            votingPower: 100,
+            decision: true,
+        },
         signature: 'undefined',
         finalVotingPower: 180,
     },
@@ -40,11 +40,11 @@ function encodeLeaf(userSignedVotingCard: string, sequencerSignature: string) {
     );
 }
 
-function abiEncodeUserVote(decision: boolean, votingPower: number) {
+function abiEncodeUserVote(decision: boolean, votingPower: number, votingId: string) {
     // Same as `abi.encodePacked` in Solidity
     return ethers.utils.solidityPack(
-        ["bool", "uint64"],
-        [decision, votingPower]
+        ["bool", "uint64", "bytes32"],
+        [decision, votingPower, votingId]
     );
 }
 
@@ -65,23 +65,23 @@ describe("Check stateborn", function () {
         console.log('user1 address', randomWallet1.address);
         console.log('user2 address', randomWallet2.address);
         console.log('sequencer address', sequencerWallet.address);
+        const pollId = ethers.utils.formatBytes32String("1");
 
+        const userVote1 = ethers.utils.keccak256(abiEncodeUserVote(votingCard1.votingCard.userVote.decision, votingCard1.votingCard.userVote.votingPower, pollId));
+        const userVote2 = ethers.utils.keccak256(abiEncodeUserVote(votingCard2.votingCard.userVote.decision, votingCard2.votingCard.userVote.votingPower, pollId));
+        votingCard1.votingCard.signature = await randomWallet1.signMessage(ethers.utils.arrayify(userVote1));
+        votingCard2.votingCard.signature = await randomWallet2.signMessage(ethers.utils.arrayify(userVote2));
 
-        const userCardToSign1 = ethers.utils.keccak256(abiEncodeUserVote(userVote.decision, userVote.votingPower));
-        const userCardToSign2 = ethers.utils.keccak256(abiEncodeUserVote(userVote2.decision, userVote2.votingPower));
-        votingCard1.votingCard.signature = await randomWallet1.signMessage(ethers.utils.arrayify(userCardToSign1));
-        votingCard2.votingCard.signature = await randomWallet2.signMessage(ethers.utils.arrayify(userCardToSign2));
-
-        const userSignedVotingCard1 = ethers.utils.keccak256(abiEncodeSequencerVoting(userCardToSign1, votingCard1.votingCard.signature));
-        const userSignedVotingCard2 = ethers.utils.keccak256(abiEncodeSequencerVoting(userCardToSign2, votingCard2.votingCard.signature));
-        votingCard1.sequencerSignature = await sequencerWallet.signMessage(ethers.utils.arrayify(userSignedVotingCard1));
-        votingCard2.sequencerSignature = await sequencerWallet.signMessage(ethers.utils.arrayify(userSignedVotingCard2));
+        const sequencerCard1 = ethers.utils.keccak256(abiEncodeSequencerVoting(userVote1, votingCard1.votingCard.signature));
+        const sequencerCard2 = ethers.utils.keccak256(abiEncodeSequencerVoting(userVote2, votingCard2.votingCard.signature));
+        votingCard1.sequencerSignature = await sequencerWallet.signMessage(ethers.utils.arrayify(sequencerCard1));
+        votingCard2.sequencerSignature = await sequencerWallet.signMessage(ethers.utils.arrayify(sequencerCard2));
 
 
         // votingCard2.sequencerSignature = await sequencerWallet.signMessage(userSignedVotingCard2);
         const list = [
-            encodeLeaf(userSignedVotingCard1, votingCard1.sequencerSignature),
-            encodeLeaf(userSignedVotingCard2, votingCard2.sequencerSignature),
+            encodeLeaf(sequencerCard1, votingCard1.sequencerSignature),
+            encodeLeaf(sequencerCard2, votingCard2.sequencerSignature),
         ];
 
         const merkleTree = new MerkleTree(list, keccak256, {
@@ -93,34 +93,46 @@ describe("Check stateborn", function () {
         // Compute the Merkle Proof of the owner address (0'th item in list)
         // off-chain. The leaf node is the hash of that value.
         //zmien tuta zeby dostac hash
-        const leaf = keccak256(list[1]);
-        const proof = merkleTree.getHexProof(leaf);
+        const leaf = keccak256(list[0]);
+        const merkleProofs = merkleTree.getHexProof(leaf);
 
 
-        const whitelist = await ethers.getContractFactory("UserDisputer");
-        const Whitelist = await whitelist.deploy(root);
-        await Whitelist.deployed();
-        const result = await Whitelist.publishVote(
-            userVote2.decision,
-            userVote2.votingPower,
-            votingCard2.votingCard.signature,
-            sequencerWallet.address,
-            votingCard2.sequencerSignature,
-            proof
+        const VotingMachine = await ethers.getContractFactory("VotingMachine");
+        const votingMachine = await VotingMachine.deploy();
+        await votingMachine.deployed();
+        let pollAddress = '';
+        const waitForEventEmitted = new Promise((resolve) => {
+            votingMachine.on('PollCreated', (pollId, _pollAddress) => {
+                console.log(`Proxy created at ${pollAddress} with id ${pollId}`);
+                pollAddress = _pollAddress;
+                resolve(true);
+            });
+        });
+        await votingMachine.connect(sequencerWallet).createPoll(pollId, root, {value: ethers.utils.parseEther("9000") });
+        await waitForEventEmitted;
+        const Poll = await ethers.getContractFactory("Poll");
+        const poll = Poll.attach(pollAddress);
+        await poll.disputeSequencer(
+            votingCard1.votingCard.userVote.decision,
+            votingCard1.votingCard.userVote.votingPower,
+            randomWallet1.address,
+            votingCard1.votingCard.signature,
+            votingCard1.sequencerSignature,
+            {value: ethers.utils.parseEther("9000") }
         );
-        // expect(ethers.utils.toUtf8Bytes(result)).to.equal(ethers.utils.toUtf8Bytes(userCardToSign1));
+        console.log('user balance: ', ethers.utils.formatEther(await ethers.provider.getBalance(randomWallet1.address)));
+        console.log('sequencer balance: ', ethers.utils.formatEther(await ethers.provider.getBalance(sequencerWallet.address)));
+        //3 days +1
+        await time.increase(259200 + 1);
+        // await poll.connect(sequencerWallet).disputeUser(
+        //     randomWallet1.address,
+        //     merkleProofs,
+        // );
+        await time.increase(259200 + 1);
+        await poll.connect(randomWallet1).claimDispute();
 
-
-
-
-        // // Provide the Merkle Proof to the contract, and ensure that it can verify
-        // // that this leaf node was indeed part of the Merkle Tree
-        // let verified = await Whitelist.checkInWhitelist(proof, 2);
-        // expect(verified).to.equal(true);
-        //
-        // // Provide an invalid Merkle Proof to the contract, and ensure that
-        // // it can verify that this leaf node was NOT part of the Merkle Tree
-        // verified = await Whitelist.checkInWhitelist([], 2);
-        // expect(verified).to.equal(false);
+        await time.increase(259200 + 1);
+        console.log('po dispute user balance: ', ethers.utils.formatEther(await ethers.provider.getBalance(randomWallet1.address)));
+        console.log('po dispute sequencer balance: ', ethers.utils.formatEther(await ethers.provider.getBalance(sequencerWallet.address)));
     });
 });
