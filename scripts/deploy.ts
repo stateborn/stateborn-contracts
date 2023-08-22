@@ -1,41 +1,53 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers } from 'hardhat';
+
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
+    const currentTimestampInSeconds = Math.round(Date.now() / 1000);
+    const unlockTime = currentTimestampInSeconds + 60;
+    const name = 'My token';
+    const symbol = 'TOKEN';
+    const decimals = 21;
+    const totalSupply = ethers.utils.parseUnits("10000", decimals);
+    // metamask account
+    const transferToAddress = '0xF4A87e028d06c0aB13FF4630CA1f84b28a91Fa60';
 
-  const lockedAmount = ethers.utils.parseEther("0.001");
+    //
+    // const erc20Development = await ethers.deployContract("ERC20Development", [name, symbol, decimals, totalSupply], {
+    //     _name: name,
+    //     _symbol: symbol,
+    //     _decimals: decimals,
+    //     _totalSupply: totalSupply,
+    // });
+    //
+    // await erc20Development.deployed();
+    //
+    // console.log(`Token deployed to ${erc20Development.address}`);
+    //
+    // await erc20Development.transfer(transferToAddress, ethers.utils.parseUnits("1000", decimals));
+    //
+    // console.log(`Transfered 10000 tokens to ${transferToAddress}`);
+    //
+    // const wallet = (await ethers.getSigners())[0];
+    // console.log('wallet address', wallet.address);
+    // await wallet.sendTransaction({
+    //     to: transferToAddress,
+    //     value: ethers.utils.parseEther("10"),
+    // })
+    // console.log(`Sent ${ethers.utils.parseEther("10")} ETH to ${transferToAddress}`);
+    //
 
-  const MultisigFactory = await ethers.getContractFactory("GnosisSafe");
-  const multisig = await MultisigFactory.deploy();
-  await multisig.deployed();
-  console.log(`Multisig deployed to ${multisig.address}`);
+    const token = await ethers.deployContract("ERC721Development");
+    await token.deployed();
 
-  const encoded = ethers.utils.defaultAbiCoder.encode(['address[]', 'uint256', 'address', 'bytes', 'address', 'address', 'uint256', 'address'], [
-    ['0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'],
-    1,
-    ethers.constants.AddressZero,
-    "0x",
-    ethers.constants.AddressZero,
-    ethers.constants.AddressZero,
-    0,
-    ethers.constants.AddressZero
-  ])
-  const MultisigProxyFactory = await ethers.getContractFactory("GnosisSafeProxyFactory");
-  const multisigProxy = await MultisigProxyFactory.deploy();
-  await multisigProxy.deployed();
-  //
-  console.log(`Multisig factory deployed to ${multisigProxy.address}`);
-  const listener = multisigProxy.on('ProxyCreation', (proxy, owner) => {
-    console.log(`Proxy created at ${proxy} by ${owner}`)
-    listener.removeAllListeners();
-  });
-  const res = await multisigProxy.createProxy(multisig.address, encoded);
+    console.log(`NFT deployed to ${token.address}`);
+    const signer = (await ethers.getSigners())[0];
+    await token.createNFT(signer.address, 'https://arweave.net/gTzo012IdW-2nYxsWdX4y1jB4eC7ZljT4oBO9AFrJZ8\n');
+    console.log(`Created NFT for ${signer.address}`);
+    await token.createNFT(transferToAddress, 'https://arweave.net/gTzo012IdW-2nYxsWdX4y1jB4eC7ZljT4oBO9AFrJZ8\n');
+    console.log(`Created NFT for ${transferToAddress}`);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+    console.error(error);
+    process.exitCode = 1;
 });
