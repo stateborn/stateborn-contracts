@@ -57,7 +57,7 @@ describe("Proposal test", function () {
             const oneSecondAfterNow = BigNumber.from(nowInSeconds + 3)
             const contractionCreationTime = await proposal.contractCreationTime();
             expect(contractionCreationTime, "Expecting contractCreationTime correct").to.be.gte(oneSecondBeforeNow);
-            expect(await proposal.contractCreationTime(), "Expecting contractCreationTime correct").to.be.lte(oneSecondAfterNow);
+            expect(contractionCreationTime, "Expecting contractCreationTime correct").to.be.lte(oneSecondAfterNow);
             expect(await proposal.forVotesCounter(), "Expecting forVotesCounter correct").to.eq(1);
             expect(await proposal.againstVotesCounter(), "Expecting againstVotesCounter correct").to.eq(0);
             expect(await proposal.executed(), "Expecting executed correct").to.be.false;
@@ -77,7 +77,8 @@ describe("Proposal test", function () {
                 generateRandomIntNumberFrom1To100(),
                 "5");
             //when and then
-            expect((await proposal.votes(account.address)).forNativeCollateral).to.eq(5);
+            const vote = await proposal.votes(account.address);
+            expectProposalVoteResults(vote, 5, 0, 0, 0);
         });
 
         it("should revert when creating proposal with 0 ETH collateral", async function () {
@@ -96,7 +97,7 @@ describe("Proposal test", function () {
         });
     });
 
-    describe("vote", function () {
+    describe("vote, voteWithToken", function () {
 
         it("should increment voter votes when vote for (5 ETH vote)", async function () {
             //given
@@ -115,8 +116,31 @@ describe("Proposal test", function () {
 
             //then
             const vote = await proposal.votes(otherAccount.address);
-            expectProposalVoteResults(vote, 5, 0, 5, 0);
+            expectProposalVoteResults(vote, 5, 0, 0, 0);
             expect(await ethers.provider.getBalance(proposal.address)).to.eq(ethers.utils.parseEther("6"));
+        });
+
+        it("should increment voter votes when vote for 3 times (3x5 ETH vote)", async function () {
+            //given
+            const { dao, token, account,  otherAccount }  = await loadFixture(initializeErc20TokenAndDao);
+            const proposal = await createSendErc20Proposal(
+                dao,
+                token.address,
+                generateRandomProposalId(),
+                generateRandomMerkleRoot(),
+                otherAccount.address,
+                generateRandomIntNumberFrom1To100());
+            const proposalByOtherAccount = proposal.connect(otherAccount);
+
+            //when
+            await voteOnProposalWithCollateral(proposalByOtherAccount, true, 5);
+            await voteOnProposalWithCollateral(proposalByOtherAccount, true, 5);
+            await voteOnProposalWithCollateral(proposalByOtherAccount, true, 5);
+
+            //then
+            const vote = await proposal.votes(otherAccount.address);
+            expectProposalVoteResults(vote, 15, 0, 0, 0);
+            expect(await ethers.provider.getBalance(proposal.address)).to.eq(ethers.utils.parseEther("16"));
         });
 
         it("should increment voter votes when vote against (5 ETH vote)", async function () {
@@ -136,8 +160,31 @@ describe("Proposal test", function () {
 
             //then
             const vote = await proposal.votes(otherAccount.address);
-            expectProposalVoteResults(vote, 0, 5, 0, 5);
+            expectProposalVoteResults(vote, 0, 5, 0, 0);
             expect(await ethers.provider.getBalance(proposal.address)).to.eq(ethers.utils.parseEther("6"));
+        });
+
+        it("should set votes once when vote for with 500 token collateral 3 times (expecting 5 votes)", async function () {
+            //given
+            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+            const proposal = await createSendErc20Proposal(
+                dao,
+                token.address,
+                generateRandomProposalId(),
+                generateRandomMerkleRoot(),
+                otherAccount.address,
+                generateRandomIntNumberFrom1To100());
+            const proposalByOtherAccount = proposal.connect(otherAccount);
+
+            //when
+            await voteOnProposalWithTokenCollateral(proposalByOtherAccount, true);
+            await voteOnProposalWithTokenCollateral(proposalByOtherAccount, true);
+            await voteOnProposalWithTokenCollateral(proposalByOtherAccount, true);
+
+            //then
+            const vote = await proposal.votes(otherAccount.address);
+            expectProposalVoteResults(vote, 0, 0, 5, 0);
+            expect(await ethers.provider.getBalance(proposal.address)).to.eq(ethers.utils.parseEther("1"));
         });
 
         it("should increment voter votes when vote for with 500 token collateral (5 votes)", async function () {
@@ -157,7 +204,7 @@ describe("Proposal test", function () {
 
             //then
             const vote = await proposal.votes(otherAccount.address);
-            expectProposalVoteResults(vote, 5, 0, 0, 0);
+            expectProposalVoteResults(vote, 0, 0, 5, 0);
             expect(await ethers.provider.getBalance(proposal.address)).to.eq(ethers.utils.parseEther("1"));
         });
 
@@ -178,7 +225,7 @@ describe("Proposal test", function () {
 
             //then
             const vote = await proposal.votes(otherAccount.address);
-            expectProposalVoteResults(vote, 0, 5, 0, 0);
+            expectProposalVoteResults(vote, 0, 0, 0, 5);
             expect(await ethers.provider.getBalance(proposal.address)).to.eq(ethers.utils.parseEther("1"));
         });
 
@@ -200,7 +247,7 @@ describe("Proposal test", function () {
 
             //then
             const vote = await proposal.votes(otherAccount.address);
-            expectProposalVoteResults(vote, 5, 5, 5, 5);
+            expectProposalVoteResults(vote, 5, 5, 0, 0);
             expect(await ethers.provider.getBalance(proposal.address)).to.eq(ethers.utils.parseEther("11"));
         });
 
@@ -222,7 +269,7 @@ describe("Proposal test", function () {
 
             //then
             const vote = await proposal.votes(otherAccount.address);
-            expectProposalVoteResults(vote, 5, 5, 0, 0);
+            expectProposalVoteResults(vote, 0, 0, 5, 5);
             expect(await ethers.provider.getBalance(proposal.address)).to.eq(ethers.utils.parseEther("1"));
         });
 
@@ -348,8 +395,67 @@ describe("Proposal test", function () {
             expectBalanceDiffIsGte(otherAccountBalanceBeforeClaim, await ethers.provider.getBalance(otherAccount.address), 3);
             expectBalanceNotChanged(creatorBalanceBeforeClaim, await ethers.provider.getBalance(account.address));
 
+            await expect(proposal.claimReward()).to.be.revertedWith("Reward not apply");
             await expect(proposalByOtherAccount.claimReward()).to.be.revertedWith("Reward not apply");
         });
 
+        it("should reward against voters only once and not for voters when 2:3 (3 votes against)", async function () {
+            //given
+            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+
+            const signers = await ethers.getSigners();
+            const otherAccount2 = signers[2];
+            const otherAccount3 = signers[3];
+            const otherAccount4 = signers[4];
+            const proposal = await createSendErc20Proposal(
+                dao,
+                token.address,
+                generateRandomProposalId(),
+                generateRandomMerkleRoot(),
+                otherAccount.address,
+                generateRandomIntNumberFrom1To100());
+
+            const proposalByOtherAccount = proposal.connect(otherAccount);
+            const res1 = voteOnProposalWithCollateral(proposalByOtherAccount, true, 1);
+
+            const proposalByOtherAccount2 = proposal.connect(otherAccount2);
+            const res2 = voteOnProposalWithCollateral(proposalByOtherAccount2, false, 1);
+
+            const proposalByOtherAccount3 = proposal.connect(otherAccount3);
+            const res3 = await voteOnProposalWithCollateral(proposalByOtherAccount3, false, 1);
+
+            const proposalByOtherAccount4 = proposal.connect(otherAccount4);
+            const res4 = voteOnProposalWithCollateral(proposalByOtherAccount4, false, 1);
+
+            await Promise.all([res1, res2, res3, res4]);
+
+            await waitForProposalToEnd(proposal);
+
+            const creatorBalanceBeforeClaim = await ethers.provider.getBalance(account.address);
+            const otherAccountBalanceBeforeClaim = await ethers.provider.getBalance(otherAccount.address);
+            const otherAccount2BalanceBeforeClaim = await ethers.provider.getBalance(otherAccount2.address);
+            const otherAccount3BalanceBeforeClaim = await ethers.provider.getBalance(otherAccount3.address);
+            const otherAccount4BalanceBeforeClaim = await ethers.provider.getBalance(otherAccount4.address);
+
+            //when and then
+            await expect(proposal.claimReward()).to.be.revertedWith("Reward not apply");
+            await expect(proposalByOtherAccount.claimReward()).to.be.revertedWith("Reward not apply");
+            await proposalByOtherAccount2.claimReward();
+            await proposalByOtherAccount3.claimReward();
+            await proposalByOtherAccount4.claimReward();
+
+            expect(await ethers.provider.getBalance(proposal.address)).to.eq(ethers.utils.parseEther("0"));
+            expectBalanceNotChanged(creatorBalanceBeforeClaim, await ethers.provider.getBalance(account.address));
+            expectBalanceNotChanged(otherAccountBalanceBeforeClaim, await ethers.provider.getBalance(otherAccount.address));
+            expectBalanceDiffIsGte(otherAccount2BalanceBeforeClaim, await ethers.provider.getBalance(otherAccount2.address), 1);
+            expectBalanceDiffIsGte(otherAccount3BalanceBeforeClaim, await ethers.provider.getBalance(otherAccount3.address), 1);
+            expectBalanceDiffIsGte(otherAccount4BalanceBeforeClaim, await ethers.provider.getBalance(otherAccount4.address), 1);
+
+            await expect(proposal.claimReward()).to.be.revertedWith("Reward not apply");
+            await expect(proposalByOtherAccount.claimReward()).to.be.revertedWith("Reward not apply");
+            await expect(proposalByOtherAccount2.claimReward()).to.be.revertedWith("Reward not apply");
+            await expect(proposalByOtherAccount3.claimReward()).to.be.revertedWith("Reward not apply");
+            await expect(proposalByOtherAccount4.claimReward()).to.be.revertedWith("Reward not apply");
+        });
     });
 });

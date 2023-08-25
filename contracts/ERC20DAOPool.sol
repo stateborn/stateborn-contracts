@@ -7,8 +7,8 @@ contract ERC20DAOPool is IDAOPool, Ownable {
 
     IERC20 public token;
     mapping(address => uint256) public balances;
-    mapping(address => address[]) public proposalForVotes;
-    mapping(address => address[]) public proposalAgainstVotes;
+    mapping(address => address[]) public proposalForVoters;
+    mapping(address => address[]) public proposalAgainstVoters;
     mapping(address => uint256) public voterActiveProposals;
     mapping(address => bool) public approvedProposals;
 
@@ -25,30 +25,30 @@ contract ERC20DAOPool is IDAOPool, Ownable {
     }
 
     function deposit(uint256 amount) public {
-        require(token.transferFrom(msg.sender, address(this), amount), "Transfer failed");
         balances[msg.sender] += amount;
         emit TokensDeposited(msg.sender, address(token), amount);
+        require(token.transferFrom(msg.sender, address(this), amount), "Transfer failed");
     }
 
     function withdraw(uint256 amount, address withdrawAddress) public {
         require(voterActiveProposals[msg.sender] == 0, "User has active proposals");
         require(balances[msg.sender] >= amount, "Insufficient balance");
+        require(token.transferFrom(address(this), withdrawAddress, amount), "Transfer failed");
         balances[msg.sender] -= amount;
         if (balances[msg.sender] == 0) {
             delete balances[msg.sender];
         }
-        require(token.transferFrom(address(this), withdrawAddress, amount), "Transfer failed");
         emit TokensWithdrawn(msg.sender, address(token), amount, withdrawAddress);
     }
 
     // is invoked by proposal
     // msg.sender == proposal address
     function vote(address voterAddress, bool voteSide) override external {
-        require(approvedProposals[msg.sender] == true, "Proposal not approved");
+        require(approvedProposals[msg.sender], "Proposal not approved");
         if (voteSide) {
-            proposalForVotes[msg.sender].push(voterAddress);
+            proposalForVoters[msg.sender].push(voterAddress);
         } else {
-            proposalAgainstVotes[msg.sender].push(voterAddress);
+            proposalAgainstVoters[msg.sender].push(voterAddress);
         }
         voterActiveProposals[voterAddress] += 1;
     }
@@ -56,7 +56,7 @@ contract ERC20DAOPool is IDAOPool, Ownable {
     function resolveProposal(address proposalAddress) public {
         Proposal proposal = Proposal(proposalAddress);
         require(proposal.isEnded(), "Proposal not ended");
-        address[] memory voters = proposal.isPassed() ? proposalForVotes[proposalAddress] : proposalAgainstVotes[proposalAddress];
+        address[] memory voters = proposal.isPassed() ? proposalForVoters[proposalAddress] : proposalAgainstVoters[proposalAddress];
         uint256 toTransferAmount = 0;
         for (uint256 i = 0; i < voters.length; i++) {
             address voterAddress = voters[i];
@@ -64,8 +64,9 @@ contract ERC20DAOPool is IDAOPool, Ownable {
             delete balances[voterAddress];
             voterActiveProposals[voterAddress] -= 1;
         }
-        delete proposalForVotes[proposalAddress];
-        delete proposalAgainstVotes[proposalAddress];
+        delete proposalForVoters[proposalAddress];
+        delete proposalAgainstVoters[proposalAddress];
+        delete approvedProposals[proposalAddress];
         require(token.transfer(owner(), toTransferAmount), "Token transfer failed");
     }
 

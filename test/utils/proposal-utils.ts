@@ -64,10 +64,15 @@ export const voteOnProposalWithTokenCollateral = async (proposal: Proposal, vote
     await proposal.voteWithToken(vote);
 }
 
-export const expectProposalVoteResults = (vote: any, forVotes: number, againstVotes: number, forNativeCollateral: number, againstNativeCollateral: number) => {
-    expect(vote.forVotes).to.eq(forVotes);
-    expect(vote.againstVotes).to.eq(againstVotes);
-    expect(vote.forNativeCollateral).to.eq(forNativeCollateral);
-    expect(vote.againstNativeCollateral).to.eq(againstNativeCollateral);
+export const expectProposalVoteResults = (
+        vote: any,
+        nativeForVotes: number,
+        nativeAgainstVotes: number,
+        tokenForVotes: number,
+        tokenAgainstVotes: number) => {
+    expect(vote.nativeForVotes).to.eq(nativeForVotes);
+    expect(vote.nativeAgainstVotes).to.eq(nativeAgainstVotes);
+    expect(vote.tokenForVotes).to.eq(tokenForVotes);
+    expect(vote.tokenAgainstVotes).to.eq(tokenAgainstVotes);
 }
 

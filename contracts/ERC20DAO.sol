@@ -14,7 +14,7 @@ contract ERC20DAO is DAO {
         emit DaoPoolCreated(address(daoPool));
     }
 
-    function getDaoPool() override internal returns (ERC20DAOPool) {
+    function getDaoPool() override view internal returns (ERC20DAOPool) {
         return daoPool;
     }
 }

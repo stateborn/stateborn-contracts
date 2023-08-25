@@ -2,7 +2,7 @@
 //pragma solidity ^0.8.18;
 //
 //import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-//import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+//import "@openzeppelin/cosdsdsntracts/utils/cryptography/ECDSA.sol";
 //import "hardhat/console.sol";
 //import "./DAO.sol";
 //import "./Proposal.sol";

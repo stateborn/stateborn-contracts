@@ -3,10 +3,11 @@ pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./Proposal.sol";
 import "./ERC20DAOPool.sol";
 
-abstract contract DAO {
+abstract contract DAO is ReentrancyGuard {
 
     mapping(bytes => Proposal) private proposals;
     uint256 public challengePeriodSeconds = 1 minutes;
@@ -38,7 +39,7 @@ abstract contract DAO {
     function createProposal(
             bytes memory _proposalId,
             bytes32 _proposalMerkleRoot,
-            bytes[] calldata _payloads) payable public {
+            bytes[] calldata _payloads) payable public nonReentrant {
         Proposal existingPool = proposals[_proposalId];
         require(address(existingPool) == address(0), "Proposal already exists");
         Proposal proposal = new Proposal{value: msg.value}(_proposalMerkleRoot, payable(msg.sender), nativeCollateral, tokenCollateral, challengePeriodSeconds, _payloads, address(getDaoPool()));

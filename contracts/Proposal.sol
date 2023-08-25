@@ -7,11 +7,11 @@ import "./DAO.sol";
 import "./IDAOPool.sol";
 import "hardhat/console.sol";
 
-struct Vote {
-    uint256 forVotes;
-    uint256 againstVotes;
-    uint256 forNativeCollateral;
-    uint256 againstNativeCollateral;
+struct PollCard {
+    uint256 nativeForVotes;
+    uint256 nativeAgainstVotes;
+    uint256 tokenForVotes;
+    uint256 tokenAgainstVotes;
 }
 
 contract Proposal {
@@ -30,8 +30,7 @@ contract Proposal {
     uint256 public forVotesCounter;
     uint256 public againstVotesCounter;
 
-
-    mapping(address => Vote) public votes;
+    mapping(address => PollCard) public votes;
     bool public executed = false;
 
     constructor(
@@ -53,28 +52,19 @@ contract Proposal {
         daoAddress = msg.sender;
 
         uint256 votesCount = _validateCollateralAndGetVotesCount();
-        Vote storage proposalVote = votes[_sequencerAddress];
-        _vote(true, proposalVote, votesCount);
-        votes[_sequencerAddress].forNativeCollateral += votesCount;
+        PollCard storage pollCard = votes[_sequencerAddress];
+        pollCard.nativeForVotes = votesCount;
+        forVotesCounter = votesCount;
     }
 
     function vote(bool voteSide) payable public isInChallengePeriodMod {
         uint256 votesCount = _validateCollateralAndGetVotesCount();
-        Vote storage proposalVote = votes[msg.sender];
-        _vote(voteSide, proposalVote, votesCount);
+        PollCard storage pollCard = votes[msg.sender];
         if (voteSide) {
-            proposalVote.forNativeCollateral += votesCount;
-        } else {
-            proposalVote.againstNativeCollateral += votesCount;
-        }
-    }
-
-    function _vote(bool voteSide, Vote storage vote, uint256 votesCount) private {
-        if (voteSide == true) {
-            vote.forVotes += votesCount;
+            pollCard.nativeForVotes += votesCount;
             forVotesCounter += votesCount;
         } else {
-            vote.againstVotes += votesCount;
+            pollCard.nativeAgainstVotes += votesCount;
             againstVotesCounter += votesCount;
         }
     }
@@ -88,23 +78,34 @@ contract Proposal {
     function voteWithToken(bool voteSide) public isInChallengePeriodMod {
         uint256 userTokenBalance = daoPool.balanceOf(msg.sender);
         uint256 votesCount = userTokenBalance / tokenCollateral;
-        daoPool.vote(msg.sender, voteSide);
         require(votesCount > 0, "Token collateral not enough");
-        Vote storage proposalVote = votes[msg.sender];
-        _vote(voteSide, proposalVote, votesCount);
+        PollCard storage pollCard = votes[msg.sender];
+        bool firstVote = pollCard.tokenForVotes == 0 && pollCard.tokenAgainstVotes == 0;
+        if (voteSide) {
+            uint256 previousTokenVotes = pollCard.tokenForVotes;
+            pollCard.tokenForVotes = votesCount;
+            forVotesCounter = (forVotesCounter - previousTokenVotes) + votesCount;
+        } else {
+            uint256 previousTokenVotes = pollCard.tokenAgainstVotes;
+            pollCard.tokenAgainstVotes = votesCount;
+            againstVotesCounter = (againstVotesCounter - previousTokenVotes) + votesCount;
+        }
+        if (firstVote) {
+            daoPool.vote(msg.sender, voteSide);
+        }
     }
 
     function claimReward() payable public isAfterChallengePeriodMod {
-        Vote memory proposalVote = votes[msg.sender];
+        PollCard memory pollCard = votes[msg.sender];
         bool passed = isPassed();
-        uint256 wonVoterVotesCount = passed ? proposalVote.forVotes : proposalVote.againstVotes;
+        uint256 wonVoterVotesCount = passed ? (pollCard.nativeForVotes + pollCard.tokenForVotes)  : (pollCard.nativeAgainstVotes + pollCard.tokenAgainstVotes);
         require(wonVoterVotesCount > 0, "Reward not apply");
         uint256 allWonVotesCount = passed ? forVotesCounter : againstVotesCounter;
         uint256 allOppositeVotesCount = passed ? againstVotesCounter : forVotesCounter;
         uint256 balanceToDistribute = allOppositeVotesCount * nativeCollateral;
         uint256 dust = balanceToDistribute % allWonVotesCount;
-        uint256 voterNativeCollateral = passed ? proposalVote.forNativeCollateral : proposalVote.againstNativeCollateral;
-        uint256 reward = (voterNativeCollateral * nativeCollateral) + (balanceToDistribute * wonVoterVotesCount / allWonVotesCount);
+        uint256 voterReturnCollateralCount = passed ? pollCard.nativeForVotes : pollCard.nativeAgainstVotes;
+        uint256 reward = (voterReturnCollateralCount * nativeCollateral) + (balanceToDistribute * wonVoterVotesCount / allWonVotesCount);
         // if it's last tx, send the dust left to last claimer
         if (reward + dust == address(this).balance) {
             reward = address(this).balance;
@@ -114,22 +115,14 @@ contract Proposal {
     }
 
     function executeProposal() public payable isAfterChallengePeriodMod {
-        require(executed == false, "Proposal already executed");
-        bool isProposalPassed = isPassed();
-        require(isProposalPassed == true, "Proposal did not pass");
+        require(!executed, "Proposal already executed");
+        require(isPassed(), "Proposal did not pass");
+        executed = true;
         for (uint256 i = 0; i < payloads.length; ++i) {
             bytes memory payload = payloads[i];
-            _execute(daoAddress, payload);
+            (bool success, ) = daoAddress.call(payload);
+            require(success, "Proposal: underlying transaction reverted");
         }
-        executed = true;
-    }
-
-    function  _execute(
-        address target,
-        bytes memory data
-    ) private {
-        (bool success, ) = target.call(data);
-        require(success, "Proposal: underlying transaction reverted");
     }
 
     function isEnded() public view returns (bool) {
