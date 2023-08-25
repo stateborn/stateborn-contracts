@@ -1,115 +1,115 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "hardhat/console.sol";
-import "./IProposal.sol";
 import "./IProposalUserChallenge.sol";
 import "./ProposalUserChallenge.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "./DAO.sol";
+import "./IDAOPool.sol";
+import "hardhat/console.sol";
 
-// First user can challenge sequencer (ChallengeSequencer)
-// Than sequencer can challenge user back (ChallengeUser)
-contract Proposal is IProposal {
+struct Vote {
+    uint256 forVotes;
+    uint256 againstVotes;
+    uint256 forNativeCollateral;
+    uint256 againstNativeCollateral;
+}
 
-    bytes public constant signConstant = "\x19Ethereum Signed Message:\n32";
+contract Proposal {
 
     // 32 bytes hex value
-    bytes32 private immutable proposalMerkleRoot;
-    bytes private proposalId;
-    address payable private immutable sequencerAddress;
-    uint256 private immutable  challengePeriod;
-    uint256 private immutable nativeCollateral;
-    uint256 private immutable tokenCollateral;
-    address[] private targets;
-    uint256[] private values;
+    bytes32 public immutable proposalMerkleRootHex;
+    address payable public immutable sequencerAddress;
+    uint256 public immutable  challengePeriodSeconds;
+    uint256 public immutable nativeCollateral;
+    uint256 public immutable tokenCollateral;
     bytes[] private payloads;
-    DAO private immutable dao;
-    uint256 private immutable contractCreationTime;
+    address public immutable daoAddress;
+    IDAOPool public immutable daoPool;
+    uint256 public immutable contractCreationTime;
 
-    // how many each address voted
-    mapping(address => uint256) public forVotes;
-    mapping(address => uint256) public againstVotes;
-    uint256 private forVotesNum;
-    uint256 private againstVotesNum;
+    uint256 public forVotesCounter;
+    uint256 public againstVotesCounter;
 
-    bool private executed = false;
-    bool private canceled = false;
+
+    mapping(address => Vote) public votes;
+    bool public executed = false;
 
     constructor(
-            bytes32 _proposalMerkleRoot,
-            bytes memory _proposalId,
+            bytes32 _proposalMerkleRootHex,
             address payable _sequencerAddress,
             uint256 _nativeCollateral,
             uint256 _tokenCollateral,
-            uint256 _challengePeriod,
-            address[] memory _targets,
-            uint256[] memory _values,
+            uint256 _challengePeriodSeconds,
             bytes[] memory _payloads,
-            address _daoAddress) payable {
-        proposalMerkleRoot = _proposalMerkleRoot;
-        proposalId = _proposalId;
+            address _daoPoolAddress) payable {
+        proposalMerkleRootHex = _proposalMerkleRootHex;
         sequencerAddress = _sequencerAddress;
         nativeCollateral = _nativeCollateral;
         tokenCollateral = _tokenCollateral;
-        challengePeriod = _challengePeriod;
-        targets = _targets;
-        values = _values;
+        challengePeriodSeconds = _challengePeriodSeconds;
         payloads = _payloads;
         contractCreationTime = block.timestamp;
-        dao = DAO(_daoAddress);
+        daoPool = IDAOPool(_daoPoolAddress);
+        daoAddress = msg.sender;
 
-        uint256 votes = validateCollateralAndGetVotes();
-        forVotes[_sequencerAddress] += votes;
-        forVotesNum += votes;
+        uint256 votesCount = _validateCollateralAndGetVotesCount();
+        Vote storage proposalVote = votes[_sequencerAddress];
+        _vote(true, proposalVote, votesCount);
+        votes[_sequencerAddress].forNativeCollateral += votesCount;
     }
 
     function vote(bool voteSide) payable public isInChallengePeriodMod {
-        require(canceled == false, "Proposal canceled");
-        require(executed == false, "Proposal executed");
-        uint256 votes = validateCollateralAndGetVotes();
-        if (msg.value == 0) {
-            dao.voteWithDaoToken(address(this), voteSide);
-        }
-        if (voteSide == true) {
-            forVotes[msg.sender] += votes;
-            forVotesNum += votes;
+        uint256 votesCount = _validateCollateralAndGetVotesCount();
+        Vote storage proposalVote = votes[msg.sender];
+        _vote(voteSide, proposalVote, votesCount);
+        if (voteSide) {
+            proposalVote.forNativeCollateral += votesCount;
         } else {
-            againstVotes[msg.sender] += votes;
-            againstVotesNum += votes;
+            proposalVote.againstNativeCollateral += votesCount;
         }
     }
 
-    function validateCollateralAndGetVotes() private returns (uint256){
-        if (msg.value > 0) {
-            require(msg.value >= nativeCollateral, "Collateral not enough");
-            return msg.value / nativeCollateral;
+    function _vote(bool voteSide, Vote storage vote, uint256 votesCount) private {
+        if (voteSide == true) {
+            vote.forVotes += votesCount;
+            forVotesCounter += votesCount;
         } else {
-            uint256 votes = dao.validateTokenCollateral(msg.sender, tokenCollateral);
-            require(votes > 0, "Token collateral not enough");
-            return votes;
+            vote.againstVotes += votesCount;
+            againstVotesCounter += votesCount;
         }
+    }
+
+    function _validateCollateralAndGetVotesCount() private returns (uint256) {
+        require(msg.value >= nativeCollateral, "Collateral too small");
+        require(msg.value % nativeCollateral == 0, "Collateral incorrect");
+        return msg.value / nativeCollateral;
+    }
+
+    function voteWithToken(bool voteSide) public isInChallengePeriodMod {
+        uint256 userTokenBalance = daoPool.balanceOf(msg.sender);
+        uint256 votesCount = userTokenBalance / tokenCollateral;
+        daoPool.vote(msg.sender, voteSide);
+        require(votesCount > 0, "Token collateral not enough");
+        Vote storage proposalVote = votes[msg.sender];
+        _vote(voteSide, proposalVote, votesCount);
     }
 
     function claimReward() payable public isAfterChallengePeriodMod {
-        uint256 voterVotesNum = isPassed() ? forVotes[msg.sender] : againstVotes[msg.sender];
-        require(voterVotesNum > 0, "Reward does not apply");
-        uint256 allVotesNum = isPassed() ? forVotesNum : againstVotesNum;
-        uint256 allVotesOppositeNum = isPassed() ? againstVotesNum : forVotesNum;
-        uint256 balanceToDistribute = allVotesOppositeNum * nativeCollateral;
-        uint256 reward = (nativeCollateral * voterVotesNum) + ((balanceToDistribute / allVotesNum) * voterVotesNum);
-        // if it's last tx, send the dust left to last voter
-        if ((address(this).balance - reward) < nativeCollateral) {
+        Vote memory proposalVote = votes[msg.sender];
+        bool passed = isPassed();
+        uint256 wonVoterVotesCount = passed ? proposalVote.forVotes : proposalVote.againstVotes;
+        require(wonVoterVotesCount > 0, "Reward not apply");
+        uint256 allWonVotesCount = passed ? forVotesCounter : againstVotesCounter;
+        uint256 allOppositeVotesCount = passed ? againstVotesCounter : forVotesCounter;
+        uint256 balanceToDistribute = allOppositeVotesCount * nativeCollateral;
+        uint256 dust = balanceToDistribute % allWonVotesCount;
+        uint256 voterNativeCollateral = passed ? proposalVote.forNativeCollateral : proposalVote.againstNativeCollateral;
+        uint256 reward = (voterNativeCollateral * nativeCollateral) + (balanceToDistribute * wonVoterVotesCount / allWonVotesCount);
+        // if it's last tx, send the dust left to last claimer
+        if (reward + dust == address(this).balance) {
             reward = address(this).balance;
         }
-        if (isPassed()) {
-            delete forVotes[msg.sender];
-        } else {
-            delete againstVotes[msg.sender];
-        }
+        delete votes[msg.sender];
         payable(msg.sender).transfer(reward);
     }
 
@@ -117,78 +117,47 @@ contract Proposal is IProposal {
         require(executed == false, "Proposal already executed");
         bool isProposalPassed = isPassed();
         require(isProposalPassed == true, "Proposal did not pass");
-        for (uint256 i = 0; i < targets.length; ++i) {
-            address target = targets[i];
-//            uint256 value = values[i];
+        for (uint256 i = 0; i < payloads.length; ++i) {
             bytes memory payload = payloads[i];
-            _execute(target, payload);
+            _execute(daoAddress, payload);
         }
         executed = true;
     }
 
-    /**
-    * @dev Execute an operation's call.
-     */
     function  _execute(
         address target,
         bytes memory data
     ) private {
-//        (bool success, ) = target.call{value: value}(data);
         (bool success, ) = target.call(data);
         require(success, "Proposal: underlying transaction reverted");
     }
 
     function isEnded() public view returns (bool) {
-        return !isInChallengePeriod();
+        return !_isInChallengePeriod();
     }
 
-    function isPassed() public view override returns (bool) {
-        if (isInChallengePeriod()) {
+    function isPassed() public view returns (bool) {
+        if (_isInChallengePeriod()) {
             return false;
         }
-        return forVotesNum > againstVotesNum;
+        return forVotesCounter > againstVotesCounter;
     }
 
-    function isExecuted() public view returns (bool) {
-        return executed;
+    function getPayloads() public view returns (bytes[] memory) {
+        return payloads;
     }
 
-    function getProposalId() external view override returns (bytes memory) {
-        return proposalId;
-    }
-
-    function getProposalMerkleRoot() external view returns (bytes32) {
-        return proposalMerkleRoot;
-    }
-
-//    function createProposalUserChallenge(
-//            bool decision,
-//            uint64 votingPower,
-//            address userAddress,
-//            bytes memory userSignature,
-//            bytes memory sequencerSignature) payable external {
-//        IProposalUserChallenge storage proposalUserChallenge = proposalUserChallenges[userAddress];
-//        require(address(proposalUserChallenge) == 0, "User already challenged");
-//        proposalUserChallenge = new ProposalUserChallenge(
-//            proposalMerkleRoot,
-//            address(this),
-//            sequencerAddress,
-//            challengePeriod
-//        );
-//        proposalUserChallenges[userAddress] = proposalUserChallenge;
-//    }
-
-    function isInChallengePeriod() internal view returns (bool) {
-        return block.timestamp <= (contractCreationTime + challengePeriod);
+    function _isInChallengePeriod() private view returns (bool) {
+        return block.timestamp <= (contractCreationTime + challengePeriodSeconds);
     }
 
     modifier isInChallengePeriodMod() {
-        require(block.timestamp <= (contractCreationTime + challengePeriod), "Is not in challenge period");
+        require(block.timestamp <= (contractCreationTime + challengePeriodSeconds), "Is not in challenge period");
         _;
     }
 
     modifier isAfterChallengePeriodMod() {
-        require(block.timestamp > (contractCreationTime + challengePeriod), "Is not after challenge period");
+        require(block.timestamp > (contractCreationTime + challengePeriodSeconds), "Is not after challenge period");
         _;
     }
 }

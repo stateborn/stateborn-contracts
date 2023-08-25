@@ -1,15 +1,18 @@
-import { Contract } from 'ethers';
+import { BigNumber } from 'ethers';
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { faker } from '@faker-js/faker';
 import { LOGGER } from './pino-logger-service';
-import { checkProposalIsEnded } from './proposal-utils';
+import { ERC20DAO, ERC20DAOPool, IERC20, Proposal } from '../../typechain-types';
+import { CHALLENGE_PERIOD_SECONDS, ERC_20_DECIMALS, NATIVE_COLLATERAL, TOKEN_COLLATERAL } from '../test-constants';
+import { depositTokensToPool } from './dao-pool-utils';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
-export async function deployErc20Token(tokenDecimals: number = 18): Promise<Contract> {
+export async function deployErc20Token(): Promise<IERC20> {
     // DEPLOY TOKEN
-    const name = 'My token';
-    const symbol = 'TOKEN';
-    const totalSupply = ethers.utils.parseUnits("10000", tokenDecimals);
+    const name = faker.hacker.noun();
+    const symbol = faker.hacker.abbreviation();
+    const totalSupply = ethers.utils.parseUnits("10000", ERC_20_DECIMALS);
     const token = await ethers.deployContract("ERC20Development", [name, symbol, totalSupply], {
         // @ts-ignore
         _name: name,
@@ -18,26 +21,42 @@ export async function deployErc20Token(tokenDecimals: number = 18): Promise<Cont
     });
     await token.deployed();
     LOGGER.debug(`ERC20 token deployed to ${token.address}`);
-    return token;
+    return token as IERC20;
 }
 
-export async function deployDao(tokenAddress: string, challengePeriodSeconds: number, nativeCollateral: number, tokenDecimals: number = 18): Promise<Contract> {
-    const daoFactory = await ethers.getContractFactory("ERC20DAO");
-    const dao = await daoFactory.deploy(tokenAddress, ethers.utils.parseUnits("100", tokenDecimals), challengePeriodSeconds, ethers.utils.parseEther(nativeCollateral.toString()))
+export async function deployDao(tokenAddress: string, challengePeriodSeconds: number, nativeCollateral: BigNumber, tokenCollateral: BigNumber): Promise<{ dao: ERC20DAO, ERC20DAOPool: ERC20DAOPool}> {
+    const dao = (await ethers.deployContract('ERC20DAO', [
+        tokenAddress,
+        TOKEN_COLLATERAL,
+        challengePeriodSeconds,
+        NATIVE_COLLATERAL])) as ERC20DAO;
+    dao.on('DaoPoolCreated' , (poolAddress: string) => {
+        LOGGER.debug(`DAO pool created at ${poolAddress}`);
+    });
     await dao.deployed();
+    // @dev there was a problem with .on listener and it didn't work for multiple tests
+    LOGGER.debug(`Created DAO proposal`);
+    const result = await dao.deployTransaction.wait();
+    // @ts-ignore
+    const ERC20DAOPool =  (await ethers.getContractAt("ERC20DAOPool", result.events[1].args.daoPoolAddress)) as ERC20DAOPool;
     LOGGER.debug(`DAO deployed to ${dao.address}`);
-    return dao;
+    return { dao, ERC20DAOPool};
 }
 
-export async function transferERC20TokensToDao(token: Contract, daoAddress: string, tokenAmount: string, tokenDecimals: number = 18): Promise<void> {
-    await token.transfer(daoAddress, ethers.utils.parseUnits(tokenAmount, tokenDecimals));
-    const balanceOfDao = await token.balanceOf(daoAddress);
-    expect(balanceOfDao).to.be.eq(ethers.utils.parseUnits(tokenAmount, tokenDecimals));
-    LOGGER.debug(`Sent ${tokenAmount} tokens to DAO`);
+export async function transferERC20TokensToAddress(token: IERC20, receiver: string, tokenAmount: number): Promise<void> {
+    await token.transfer(receiver, ethers.utils.parseUnits(tokenAmount.toFixed(0), ERC_20_DECIMALS));
+    const balanceOfDao = await token.balanceOf(receiver);
+    expect(balanceOfDao).to.be.eq(ethers.utils.parseUnits(tokenAmount.toFixed(0), ERC_20_DECIMALS));
+    LOGGER.debug(`Sent ${tokenAmount} tokens to ${receiver}`);
+}
+
+export async function approveErc20(token: IERC20, addressToApprove: string, tokenAmount: number): Promise<void> {
+    await token.approve(addressToApprove, ethers.utils.parseUnits(tokenAmount.toFixed(0), ERC_20_DECIMALS));
+    LOGGER.debug(`Approved ${addressToApprove} to spend ${tokenAmount} tokens of ${token.address}`);
 }
 
 export const generateRandomMerkleRoot = (): string => {
-    return '0xca97c27a9ea0eb2d7d0ec30023e2def3607b7e0a86b3c8188c21f798a9332bff';
+    return faker.string.hexadecimal({length: 64}).toLowerCase();
 }
 
 export const generateRandomProposalId = (): Uint8Array => {
@@ -53,8 +72,8 @@ export const sleep = (ms: number) => {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export const waitForProposalToEnd = async (proposal: Contract) => {
-    while (await proposal.isEnded() === false) {
+export const waitForProposalToEnd = async (proposal: Proposal) => {
+    while (!await proposal.isEnded()) {
         LOGGER.debug('Waiting for proposal to end');
         await sleep(1000);
     }
@@ -65,8 +84,37 @@ export const waitForProposalToEnd = async (proposal: Contract) => {
 /// DAO gets 1000 ERC20 governance tokens
 export async function initializeErc20TokenAndDao() {
     const token = await deployErc20Token();
-    const dao = await deployDao(token.address, 5, 1);
-    await transferERC20TokensToDao(token, dao.address, "1000");
-    const [owner, otherAccount] = await ethers.getSigners();
-    return {token, dao, owner, otherAccount};
+    const {dao, ERC20DAOPool } = await deployDao(token.address, CHALLENGE_PERIOD_SECONDS, NATIVE_COLLATERAL, TOKEN_COLLATERAL);
+    await transferERC20TokensToAddress(token, dao.address, 1000);
+    const [account, otherAccount] = await ethers.getSigners();
+    return {token, dao, account, otherAccount, ERC20DAOPool};
+}
+
+export async function initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens() {
+    const { dao, token, account,  otherAccount, ERC20DAOPool }  = await initializeErc20TokenAndDao();
+
+    await transferERC20TokensToAddress(token, otherAccount.address, 1000);
+
+    const tokenByOtherAccount = token.connect(otherAccount);
+    await approveErc20(tokenByOtherAccount, ERC20DAOPool.address, 500);
+
+    const daoPoolByOtherAccount = ERC20DAOPool.connect(otherAccount);
+    //500 tokens should be 5 votes because of 100 tokens per vote
+    await depositTokensToPool(daoPoolByOtherAccount, 500);
+    return {token, dao, account, otherAccount, ERC20DAOPool};
+}
+
+
+export const expectBalanceDiffIsGte = (balanceBefore: BigNumber, balanceAfter: BigNumber, expectedDiff: number): void => {
+    expect(Number(Number(ethers.utils.formatEther(balanceAfter.sub(balanceBefore).toString())).toFixed(2))).to.be.gte(expectedDiff);
+}
+
+// only tx cost included to balance diff
+export const expectBalanceNotChanged = (balanceBefore: BigNumber, balanceAfter: BigNumber): void => {
+    expect(Number(Number(ethers.utils.formatEther(balanceAfter.sub(balanceBefore).toString())).toFixed(2))).to.be.lt(0.1);
+}
+
+export const expectTokenBalanceToEq = async (token: IERC20, address: string, expectedBalance: number, tokenDecimals: number = 18): Promise<void> => {
+    const balance = await token.balanceOf(address);
+    expect(balance).to.be.eq(ethers.utils.parseUnits((expectedBalance).toString(), tokenDecimals));
 }

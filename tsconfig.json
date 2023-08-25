@@ -3,9 +3,13 @@
     "target": "es2020",
     "module": "commonjs",
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
+    "forceConsistentCasingInFileNames": false,
+    "strict": false,
     "skipLibCheck": true,
-    "resolveJsonModule": true
-  }
+    "resolveJsonModule": true,
+    "outDir": "dist",
+    "types": ["@nomiclabs/hardhat-ethers"]
+  },
+  "include": [   "./**/*.ts"],
+  "files": ["./hardhat.config.ts"]
 }

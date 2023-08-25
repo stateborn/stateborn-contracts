@@ -1,12 +1,8 @@
 import pretty from 'pino-pretty';
 const pino = require('pino');
 
-const logger = pino({
-    transport: {
-        target: 'pino-pretty'
-    },
-    level: 'debug'
-})
+const logger = pino(pretty({ sync: false }));
+logger.level = 'debug';
 
 export const LOGGER = logger;
 

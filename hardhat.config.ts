@@ -1,7 +1,10 @@
+import "hardhat-gas-reporter";
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-
 require('@openzeppelin/hardhat-upgrades');
+const dotenv = require("dotenv");
+dotenv.config({path: __dirname + '/.env'});
+const { COINMARKETCAP_API_KEY} = process.env;
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -10,11 +13,7 @@ const config: HardhatUserConfig = {
             viaIR: true,
             optimizer: {
                 enabled: true,
-                details: {
-                    yulDetails: {
-                        optimizerSteps: "u",
-                    },
-                },
+                runs: 50,
             },
         },
     },
@@ -24,7 +23,14 @@ const config: HardhatUserConfig = {
             allowUnlimitedContractSize: true,
             chainId: 1337,
         }
-    }
+    },
+    gasReporter: {
+        enabled: true,
+        currency: 'USD',
+        gasPrice: 21,
+        coinmarketcap: COINMARKETCAP_API_KEY,
+        token: 'ETH',
+    },
 };
 
 export default config;
