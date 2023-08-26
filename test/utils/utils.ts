@@ -3,10 +3,9 @@ import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { faker } from '@faker-js/faker';
 import { LOGGER } from './pino-logger-service';
-import { ERC20DAO, ERC20DAOPool, IERC20, Proposal } from '../../typechain-types';
+import { ERC20Dao, ERC20DaoPool, IERC20, Proposal } from '../../typechain-types';
 import { CHALLENGE_PERIOD_SECONDS, ERC_20_DECIMALS, NATIVE_COLLATERAL, TOKEN_COLLATERAL } from '../test-constants';
 import { depositTokensToPool } from './dao-pool-utils';
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 export async function deployErc20Token(): Promise<IERC20> {
     // DEPLOY TOKEN
@@ -24,12 +23,12 @@ export async function deployErc20Token(): Promise<IERC20> {
     return token as IERC20;
 }
 
-export async function deployDao(tokenAddress: string, challengePeriodSeconds: number, nativeCollateral: BigNumber, tokenCollateral: BigNumber): Promise<{ dao: ERC20DAO, ERC20DAOPool: ERC20DAOPool}> {
-    const dao = (await ethers.deployContract('ERC20DAO', [
+export async function deployDao(tokenAddress: string, challengePeriodSeconds: number, nativeCollateral: BigNumber, tokenCollateral: BigNumber): Promise<{ dao: ERC20Dao, ERC20DaoPool: ERC20DaoPool}> {
+    const dao = (await ethers.deployContract('ERC20Dao', [
         tokenAddress,
         TOKEN_COLLATERAL,
         challengePeriodSeconds,
-        NATIVE_COLLATERAL])) as ERC20DAO;
+        NATIVE_COLLATERAL])) as ERC20Dao;
     dao.on('DaoPoolCreated' , (poolAddress: string) => {
         LOGGER.debug(`DAO pool created at ${poolAddress}`);
     });
@@ -38,9 +37,9 @@ export async function deployDao(tokenAddress: string, challengePeriodSeconds: nu
     LOGGER.debug(`Created DAO proposal`);
     const result = await dao.deployTransaction.wait();
     // @ts-ignore
-    const ERC20DAOPool =  (await ethers.getContractAt("ERC20DAOPool", result.events[1].args.daoPoolAddress)) as ERC20DAOPool;
+    const ERC20DaoPool =  (await ethers.getContractAt("ERC20DaoPool", result.events[1].args.daoPoolAddress)) as ERC20DAOPool;
     LOGGER.debug(`DAO deployed to ${dao.address}`);
-    return { dao, ERC20DAOPool};
+    return { dao, ERC20DaoPool};
 }
 
 export async function transferERC20TokensToAddress(token: IERC20, receiver: string, tokenAmount: number): Promise<void> {
@@ -84,26 +83,25 @@ export const waitForProposalToEnd = async (proposal: Proposal) => {
 /// DAO gets 1000 ERC20 governance tokens
 export async function initializeErc20TokenAndDao() {
     const token = await deployErc20Token();
-    const {dao, ERC20DAOPool } = await deployDao(token.address, CHALLENGE_PERIOD_SECONDS, NATIVE_COLLATERAL, TOKEN_COLLATERAL);
+    const {dao, ERC20DaoPool } = await deployDao(token.address, CHALLENGE_PERIOD_SECONDS, NATIVE_COLLATERAL, TOKEN_COLLATERAL);
     await transferERC20TokensToAddress(token, dao.address, 1000);
     const [account, otherAccount] = await ethers.getSigners();
-    return {token, dao, account, otherAccount, ERC20DAOPool};
+    return {token, dao, account, otherAccount, ERC20DaoPool};
 }
 
 export async function initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens() {
-    const { dao, token, account,  otherAccount, ERC20DAOPool }  = await initializeErc20TokenAndDao();
+    const { dao, token, account,  otherAccount, ERC20DaoPool }  = await initializeErc20TokenAndDao();
 
     await transferERC20TokensToAddress(token, otherAccount.address, 1000);
 
     const tokenByOtherAccount = token.connect(otherAccount);
-    await approveErc20(tokenByOtherAccount, ERC20DAOPool.address, 500);
+    await approveErc20(tokenByOtherAccount, ERC20DaoPool.address, 500);
 
-    const daoPoolByOtherAccount = ERC20DAOPool.connect(otherAccount);
+    const daoPoolByOtherAccount = ERC20DaoPool.connect(otherAccount);
     //500 tokens should be 5 votes because of 100 tokens per vote
     await depositTokensToPool(daoPoolByOtherAccount, 500);
-    return {token, dao, account, otherAccount, ERC20DAOPool};
+    return {token, dao, account, otherAccount, ERC20DaoPool};
 }
-
 
 export const expectBalanceDiffIsGte = (balanceBefore: BigNumber, balanceAfter: BigNumber, expectedDiff: number): void => {
     expect(Number(Number(ethers.utils.formatEther(balanceAfter.sub(balanceBefore).toString())).toFixed(2))).to.be.gte(expectedDiff);

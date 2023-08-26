@@ -4,10 +4,10 @@ pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./Proposal.sol";
-import "./ERC20DAOPool.sol";
+import "../Proposal.sol";
+import "../pool/DaoPool.sol";
 
-abstract contract DAO is ReentrancyGuard {
+abstract contract Dao is ReentrancyGuard {
 
     mapping(bytes => Proposal) private proposals;
     uint256 public challengePeriodSeconds = 1 minutes;
@@ -17,7 +17,7 @@ abstract contract DAO is ReentrancyGuard {
     event ProposalCreated(bytes proposalId, address proposalAddress);
     event DaoPoolCreated(address daoPoolAddress);
 
-    function getDaoPool() virtual internal returns (ERC20DAOPool);
+    function getDaoPool() virtual internal returns (DaoPool);
 
     // _tokenCollateral - should already include decimals
     // _challengePeriod - in seconds
@@ -53,7 +53,7 @@ abstract contract DAO is ReentrancyGuard {
         Proposal proposal = proposals[proposalId];
         require(address(proposal) != address(0), "Proposal does not exist");
         bool isProposalPassed = proposal.isPassed();
-        require(isProposalPassed == true, "Proposal did not pass");
+        require(isProposalPassed, "Proposal did not pass");
         IERC20 token = IERC20(tokenAddress);
         require(token.transfer(to, amount), "ERC20 transfer failed");
     }
@@ -62,7 +62,7 @@ abstract contract DAO is ReentrancyGuard {
         Proposal proposal = proposals[proposalId];
         require(address(proposal) != address(0), "Proposal does not exist");
         bool isProposalPassed = proposal.isPassed();
-        require(isProposalPassed == true, "Proposal did not pass");
+        require(isProposalPassed, "Proposal did not pass");
         IERC721 token = IERC721(tokenAddress);
         token.transferFrom(address(this), to, tokenId);
     }

@@ -3,8 +3,8 @@ pragma solidity ^0.8.18;
 
 import "./IProposalUserChallenge.sol";
 import "./ProposalUserChallenge.sol";
-import "./DAO.sol";
-import "./IDAOPool.sol";
+import "./dao/Dao.sol";
+import "./pool/IDaoPool.sol";
 import "hardhat/console.sol";
 
 struct PollCard {
@@ -24,7 +24,7 @@ contract Proposal {
     uint256 public immutable tokenCollateral;
     bytes[] private payloads;
     address public immutable daoAddress;
-    IDAOPool public immutable daoPool;
+    IDaoPool public immutable daoPool;
     uint256 public immutable contractCreationTime;
 
     uint256 public forVotesCounter;
@@ -48,7 +48,7 @@ contract Proposal {
         challengePeriodSeconds = _challengePeriodSeconds;
         payloads = _payloads;
         contractCreationTime = block.timestamp;
-        daoPool = IDAOPool(_daoPoolAddress);
+        daoPool = IDaoPool(_daoPoolAddress);
         daoAddress = msg.sender;
 
         uint256 votesCount = _validateCollateralAndGetVotesCount();

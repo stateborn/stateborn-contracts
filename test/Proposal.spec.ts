@@ -27,7 +27,7 @@ describe("Proposal test", function () {
     describe("creation", function () {
         it("should initialize correct ERC-20 proposal", async function () {
             //given
-            const {token, dao, account, otherAccount, ERC20DAOPool } = await loadFixture(initializeErc20TokenAndDao);
+            const {token, dao, account, otherAccount, ERC20DaoPool } = await loadFixture(initializeErc20TokenAndDao);
             const tokenTransferAmount = generateRandomIntNumberFrom1To100();
             const proposalId = generateRandomProposalId()
             const proposalMerkleRootHex = generateRandomMerkleRoot();
@@ -50,7 +50,7 @@ describe("Proposal test", function () {
             expect((await proposal.getPayloads()).length, "Expecting getPayloads length correct").to.eq(1);
             expect((await proposal.getPayloads())[0], "Expecting getPayloads correct").to.eq(sendDaoTokensTx);
             expect(await proposal.daoAddress(), "Expecting daoAddress correct").to.eq(dao.address);
-            expect(await proposal.daoPool(), "Expecting daoPool correct").to.eq(ERC20DAOPool.address);
+            expect(await proposal.daoPool(), "Expecting daoPool correct").to.eq(ERC20DaoPool.address);
             // it assumes block mining to be done ~3 second
             const nowInSeconds = Math.floor(new Date().getTime() / 1000);
             const oneSecondBeforeNow = BigNumber.from(nowInSeconds - 3);
@@ -166,7 +166,7 @@ describe("Proposal test", function () {
 
         it("should set votes once when vote for with 500 token collateral 3 times (expecting 5 votes)", async function () {
             //given
-            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+            const { dao, token, account,  otherAccount, ERC20DaoPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
             const proposal = await createSendErc20Proposal(
                 dao,
                 token.address,
@@ -189,7 +189,7 @@ describe("Proposal test", function () {
 
         it("should increment voter votes when vote for with 500 token collateral (5 votes)", async function () {
             //given
-            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+            const { dao, token, account,  otherAccount, ERC20DaoPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
             const proposal = await createSendErc20Proposal(
                 dao,
                 token.address,
@@ -210,7 +210,7 @@ describe("Proposal test", function () {
 
         it("should increment voter votes when vote against with 500 token collateral (5 votes)", async function () {
             //given
-            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+            const { dao, token, account,  otherAccount, ERC20DaoPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
             const proposal = await createSendErc20Proposal(
                 dao,
                 token.address,
@@ -253,7 +253,7 @@ describe("Proposal test", function () {
 
         it("should increment voter votes when vote for and against with 500 token collateral (10 votes total)", async function () {
             //given
-            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+            const { dao, token, account,  otherAccount, ERC20DaoPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
             const proposal = await createSendErc20Proposal(
                 dao,
                 token.address,
@@ -313,7 +313,7 @@ describe("Proposal test", function () {
     describe("claimReward", function () {
         it("should revert when claiming reward before proposal ended", async function () {
             //given
-            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+            const { dao, token, account,  otherAccount, ERC20DaoPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
             const proposal = await createSendErc20Proposal(
                 dao,
                 token.address,
@@ -328,7 +328,7 @@ describe("Proposal test", function () {
 
         it("should revert when claiming reward when reward not apply", async function () {
             //given
-            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+            const { dao, token, account,  otherAccount, ERC20DaoPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
             const proposal = await createSendErc20Proposal(
                 dao,
                 token.address,
@@ -345,7 +345,7 @@ describe("Proposal test", function () {
 
         it("should reward proposal creator only once (when no voters)", async function () {
             //given
-            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+            const { dao, token, account,  otherAccount, ERC20DaoPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
             const proposal = await createSendErc20Proposal(
                 dao,
                 token.address,
@@ -371,7 +371,7 @@ describe("Proposal test", function () {
 
         it("should reward challenger only once and not reward creator when 1:1", async function () {
             //given
-            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+            const { dao, token, account,  otherAccount, ERC20DaoPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
             const proposal = await createSendErc20Proposal(
                 dao,
                 token.address,
@@ -401,7 +401,7 @@ describe("Proposal test", function () {
 
         it("should reward against voters only once and not for voters when 2:3 (3 votes against)", async function () {
             //given
-            const { dao, token, account,  otherAccount, ERC20DAOPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
+            const { dao, token, account,  otherAccount, ERC20DaoPool }  = await loadFixture(initializeErc20TokenAndDaoAndOtherAccountWith500DaoTokens);
 
             const signers = await ethers.getSigners();
             const otherAccount2 = signers[2];

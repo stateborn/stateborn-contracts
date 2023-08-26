@@ -2,26 +2,19 @@
 pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./Proposal.sol";
-contract ERC20DAOPool is IDAOPool, Ownable {
+import "./DaoPool.sol";
+import "../Proposal.sol";
+
+contract ERC20DaoPool is DaoPool {
 
     IERC20 public token;
     mapping(address => uint256) public balances;
-    mapping(address => address[]) public proposalForVoters;
-    mapping(address => address[]) public proposalAgainstVoters;
-    mapping(address => uint256) public voterActiveProposals;
-    mapping(address => bool) public approvedProposals;
 
     event TokensDeposited(address indexed user, address indexed tokenAddress, uint256 amount);
     event TokensWithdrawn(address indexed user, address indexed tokenAddress, uint256 amount, address indexed withdrawAddress);
 
     constructor(address _tokenAddress) {
         token = IERC20(_tokenAddress);
-    }
-
-    // only DAO can call this
-    function approveProposal(address proposalAddress) public onlyOwner {
-        approvedProposals[proposalAddress] = true;
     }
 
     function deposit(uint256 amount) public {
@@ -41,18 +34,6 @@ contract ERC20DAOPool is IDAOPool, Ownable {
         emit TokensWithdrawn(msg.sender, address(token), amount, withdrawAddress);
     }
 
-    // is invoked by proposal
-    // msg.sender == proposal address
-    function vote(address voterAddress, bool voteSide) override external {
-        require(approvedProposals[msg.sender], "Proposal not approved");
-        if (voteSide) {
-            proposalForVoters[msg.sender].push(voterAddress);
-        } else {
-            proposalAgainstVoters[msg.sender].push(voterAddress);
-        }
-        voterActiveProposals[voterAddress] += 1;
-    }
-
     function resolveProposal(address proposalAddress) public {
         Proposal proposal = Proposal(proposalAddress);
         require(proposal.isEnded(), "Proposal not ended");
@@ -62,7 +43,7 @@ contract ERC20DAOPool is IDAOPool, Ownable {
             address voterAddress = voters[i];
             toTransferAmount += balanceOf(voterAddress);
             delete balances[voterAddress];
-            voterActiveProposals[voterAddress] -= 1;
+            voterActiveProposals[voterAddress] = 0;
         }
         delete proposalForVoters[proposalAddress];
         delete proposalAgainstVoters[proposalAddress];

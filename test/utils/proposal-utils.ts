@@ -1,12 +1,11 @@
-import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { LOGGER } from './pino-logger-service';
 import { expect } from 'chai';
-import { DAO, Proposal } from '../../typechain-types';
+import { Dao, Proposal } from '../../typechain-types';
 import { ERC_20_DECIMALS } from '../test-constants';
 
 export async function createSendErc20Proposal(
-        dao: DAO,
+        dao: Dao,
         tokenAddress: string,
         proposalId: Uint8Array,
         merkleRootHex: string,
@@ -18,7 +17,7 @@ export async function createSendErc20Proposal(
 }
 
 export async function createSendErc20ProposalWithTokensTx(
-        dao: DAO,
+        dao: Dao,
         proposalId: Uint8Array,
         merkleRootHex: string,
         sendDaoTokensTx: string,
@@ -35,7 +34,7 @@ export async function createSendErc20ProposalWithTokensTx(
     return (await ethers.getContractAt("Proposal", result.events[0].args.proposalAddress)) as Proposal;
 }
 
-export const encodeSendErc20TokensTx = (dao: DAO, proposalId: Uint8Array, tokenAddress: string, tokenReceiverAddress: string, tokenTransferAmount: string): string => {
+export const encodeSendErc20TokensTx = (dao: Dao, proposalId: Uint8Array, tokenAddress: string, tokenReceiverAddress: string, tokenTransferAmount: string): string => {
     return dao.interface.encodeFunctionData("sendErc20", [
         proposalId,
         tokenAddress,

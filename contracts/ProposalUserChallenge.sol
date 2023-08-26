@@ -4,7 +4,7 @@
 //import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 //import "@openzeppelin/cosdsdsntracts/utils/cryptography/ECDSA.sol";
 //import "hardhat/console.sol";
-//import "./DAO.sol";
+//import "./Dao.sol";
 //import "./Proposal.sol";
 //
 //using ECDSA for bytes32;

@@ -6,7 +6,6 @@ import {
     generateRandomMerkleRoot,
     generateRandomProposalId,
     initializeErc20TokenAndDao,
-    sleep,
     transferERC20TokensToAddress, waitForProposalToEnd
 } from './utils/utils';
 import {
@@ -29,7 +28,7 @@ describe("Proposal with DAO governance token collateral votes scenarios", functi
     describe("Proposal passed scenarios", function () {;
 
         it("should pass with 3:2 (3 votes for with token collateral, 2 votes against with ETH collateral)", async function () {
-            const {token, dao, account, otherAccount, ERC20DAOPool } = await loadFixture(initializeErc20TokenAndDao);
+            const {token, dao, account, otherAccount, ERC20DaoPool } = await loadFixture(initializeErc20TokenAndDao);
 
             const signers = await ethers.getSigners();
             const otherAccount2 = signers[2];
@@ -54,15 +53,15 @@ describe("Proposal with DAO governance token collateral votes scenarios", functi
 
             LOGGER.info("3. Approve ERC20Pool to spend 100 tokens of other account and other account 2");
             const tokenByOtherAccount = token.connect(otherAccount);
-            const approveRes = approveErc20(tokenByOtherAccount, ERC20DAOPool.address, 100);
+            const approveRes = approveErc20(tokenByOtherAccount, ERC20DaoPool.address, 100);
             const tokenByOtherAccount2 = token.connect(otherAccount2);
-            const approveRes2 = approveErc20(tokenByOtherAccount2, ERC20DAOPool.address, 100);
+            const approveRes2 = approveErc20(tokenByOtherAccount2, ERC20DaoPool.address, 100);
             await Promise.all([approveRes, approveRes2]);
 
             LOGGER.info("4. Deposit 100 tokens to DAO pool by other account and other account 2");
-            const daoPoolByOtherAccount = ERC20DAOPool.connect(otherAccount);
+            const daoPoolByOtherAccount = ERC20DaoPool.connect(otherAccount);
             const depositRes = depositTokensToPool(daoPoolByOtherAccount, 100);
-            const daoPoolByOtherAccount2 = ERC20DAOPool.connect(otherAccount2);
+            const daoPoolByOtherAccount2 = ERC20DaoPool.connect(otherAccount2);
             const depositRes2 = depositTokensToPool(daoPoolByOtherAccount2, 100);
             await Promise.all([depositRes, depositRes2]);
 
@@ -136,7 +135,7 @@ describe("Proposal with DAO governance token collateral votes scenarios", functi
         });
 
         it("should not pass with 2:3 (2 votes for with ETH collateral, 3 votes against with token collateral)", async function () {
-            const {token, dao, account, otherAccount, ERC20DAOPool } = await loadFixture(initializeErc20TokenAndDao);
+            const {token, dao, account, otherAccount, ERC20DaoPool } = await loadFixture(initializeErc20TokenAndDao);
 
             const signers = await ethers.getSigners();
             const otherAccount2 = signers[2];
@@ -162,19 +161,19 @@ describe("Proposal with DAO governance token collateral votes scenarios", functi
 
             LOGGER.info("3. Approve ERC20Pool to spend 100 tokens of other account and other account 2");
             const tokenByOtherAccount = token.connect(otherAccount);
-            const approveRes = approveErc20(tokenByOtherAccount, ERC20DAOPool.address, 100);
+            const approveRes = approveErc20(tokenByOtherAccount, ERC20DaoPool.address, 100);
             const tokenByOtherAccount2 = token.connect(otherAccount2);
-            const approveRes2 = approveErc20(tokenByOtherAccount2, ERC20DAOPool.address, 100);
+            const approveRes2 = approveErc20(tokenByOtherAccount2, ERC20DaoPool.address, 100);
             const tokenByOtherAccount3 = token.connect(otherAccount3);
-            const approveRes3 = approveErc20(tokenByOtherAccount3, ERC20DAOPool.address, 100);
+            const approveRes3 = approveErc20(tokenByOtherAccount3, ERC20DaoPool.address, 100);
             await Promise.all([approveRes, approveRes2, approveRes3]);
 
             LOGGER.info("4. Deposit 100 tokens to DAO pool by other account and other account 2 and other account 3");
-            const daoPoolByOtherAccount = ERC20DAOPool.connect(otherAccount);
+            const daoPoolByOtherAccount = ERC20DaoPool.connect(otherAccount);
             const depositRes = depositTokensToPool(daoPoolByOtherAccount, 100);
-            const daoPoolByOtherAccount2 = ERC20DAOPool.connect(otherAccount2);
+            const daoPoolByOtherAccount2 = ERC20DaoPool.connect(otherAccount2);
             const depositRes2 = depositTokensToPool(daoPoolByOtherAccount2, 100);
-            const daoPoolByOtherAccount3 = ERC20DAOPool.connect(otherAccount3);
+            const daoPoolByOtherAccount3 = ERC20DaoPool.connect(otherAccount3);
             const depositRes3 = depositTokensToPool(daoPoolByOtherAccount3, 100);
             await Promise.all([depositRes, depositRes2, depositRes3]);
 
