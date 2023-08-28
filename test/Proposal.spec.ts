@@ -15,7 +15,7 @@ import {
 } from './utils/utils';
 import {
   createSendErc20Proposal,
-  createSendErc20ProposalWithTokensTx,
+  createProposalWithTokensTx,
   encodeSendErc20TokensTx,
   expectProposalVoteResults,
   voteOnProposalWithCollateral,
@@ -39,7 +39,7 @@ describe('Proposal test', function () {
       const sendDaoTokensTx = encodeSendErc20TokensTx(dao, proposalId, token.address, otherAccount.address, tokenTransferAmount);
 
       //when
-      const proposal = await createSendErc20ProposalWithTokensTx(dao, proposalId, proposalMerkleRootHex, sendDaoTokensTx);
+      const proposal = await createProposalWithTokensTx(dao, proposalId, proposalMerkleRootHex, sendDaoTokensTx);
 
       //then
       expect(await proposal.proposalMerkleRootHex(), 'Expecting proposalMerkleRootHex correct').to.eq(proposalMerkleRootHex);

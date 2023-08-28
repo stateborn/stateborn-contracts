@@ -68,7 +68,7 @@ abstract contract Dao is ReentrancyGuard, IERC721Receiver {
         bool isProposalPassed = proposal.isPassed();
         require(isProposalPassed, 'Proposal did not pass');
         IERC721 token = IERC721(tokenAddress);
-        token.transferFrom(address(this), to, tokenId);
+        token.safeTransferFrom(address(this), to, tokenId);
     }
 
     function onERC721Received(address operator, address from, uint256 tokenId, bytes memory data) external override returns (bytes4) {

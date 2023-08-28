@@ -18,7 +18,7 @@ export async function deployErc20Token(): Promise<IERC20> {
   return token as IERC20;
 }
 
-export async function deployNft(): Promise<ERC721> {
+export async function deployNftToken(): Promise<ERC721> {
   // DEPLOY TOKEN
   const token = await ethers.deployContract('ERC721Development');
   await token.deployed();
@@ -112,7 +112,7 @@ export async function initializeErc20TokenAndDaoFixture() {
 }
 
 export async function initializeNftTokenAndDaoFixture() {
-  const token = await deployNft();
+  const token = await deployNftToken();
   const { dao, NFTDaoPool } = await deployNftDao(token.address, CHALLENGE_PERIOD_SECONDS);
   const [account, otherAccount] = await ethers.getSigners();
   return { token, dao, account, otherAccount, NFTDaoPool };

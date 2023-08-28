@@ -14,10 +14,24 @@ export async function createSendErc20Proposal(
   ethCollateral: string = '1'
 ): Promise<Proposal> {
   const sendDaoTokensTx = encodeSendErc20TokensTx(dao, proposalId, tokenAddress, tokenReceiverAddress, tokenTransferAmount);
-  return createSendErc20ProposalWithTokensTx(dao, proposalId, merkleRootHex, sendDaoTokensTx, ethCollateral);
+  return createProposalWithTokensTx(dao, proposalId, merkleRootHex, sendDaoTokensTx, ethCollateral);
 }
 
-export async function createSendErc20ProposalWithTokensTx(
+export async function createSendNftProposal(
+    dao: Dao,
+    tokenAddress: string,
+    proposalId: Uint8Array,
+    merkleRootHex: string,
+    tokenReceiverAddress: string,
+    tokenId: number,
+    ethCollateral: string = '1'
+): Promise<Proposal> {
+  const sendDaoTokensTx = encodeSendNftTokenTx(dao, proposalId, tokenAddress, tokenReceiverAddress, tokenId);
+  return createProposalWithTokensTx(dao, proposalId, merkleRootHex, sendDaoTokensTx, ethCollateral);
+}
+
+
+export async function createProposalWithTokensTx(
   dao: Dao,
   proposalId: Uint8Array,
   merkleRootHex: string,
@@ -34,6 +48,7 @@ export async function createSendErc20ProposalWithTokensTx(
   return (await ethers.getContractAt('Proposal', result.events[0].args.proposalAddress)) as Proposal;
 }
 
+
 export const encodeSendErc20TokensTx = (
   dao: Dao,
   proposalId: Uint8Array,
@@ -48,6 +63,22 @@ export const encodeSendErc20TokensTx = (
     ethers.utils.parseUnits(tokenTransferAmount, ERC_20_DECIMALS),
   ]);
 };
+
+export const encodeSendNftTokenTx = (
+    dao: Dao,
+    proposalId: Uint8Array,
+    tokenAddress: string,
+    tokenReceiverAddress: string,
+    tokenId: number
+): string => {
+  return dao.interface.encodeFunctionData('sendNft', [
+    proposalId,
+    tokenAddress,
+    tokenReceiverAddress,
+    tokenId,
+  ]);
+};
+
 
 export const checkProposalIsPassed = async (proposal: Proposal, expectedResult: boolean): Promise<void> => {
   const isProposalPassed = await proposal.isPassed();

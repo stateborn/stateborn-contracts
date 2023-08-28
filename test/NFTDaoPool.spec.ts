@@ -1,6 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
-  deployNft,
+  deployNftToken,
   generateRandomIntNumberFrom1To100,
   generateRandomMerkleRoot,
   generateRandomProposalId,
@@ -16,7 +16,7 @@ import { ERC721Development } from '../typechain-types';
 import { createSendErc20Proposal } from './utils/proposal-utils';
 
 const nftDaoPool = async () => {
-  const token = await deployNft();
+  const token = await deployNftToken();
   const daoPool = await createNftDaoPool(token);
   const account = (await ethers.getSigners())[0];
   const devToken = token as ERC721Development;

@@ -2,6 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers, network } from 'hardhat';
 import {
+  deployNftToken,
   expectBalanceDiffIsGte,
   expectBalanceNotChanged,
   expectTokenBalanceToEq,
@@ -11,9 +12,16 @@ import {
   initializeErc20TokenAndDaoFixture,
   waitForProposalToEnd,
 } from './utils/utils';
-import { checkProposalIsExecuted, checkProposalIsPassed, createSendErc20Proposal, voteOnProposalWithCollateral } from './utils/proposal-utils';
+import {
+  checkProposalIsExecuted,
+  checkProposalIsPassed,
+  createSendErc20Proposal,
+  createSendNftProposal,
+  voteOnProposalWithCollateral
+} from './utils/proposal-utils';
 import { LOGGER } from './utils/pino-logger-service';
-import { Proposal } from '../typechain-types';
+import { ERC721Development, Proposal } from '../typechain-types';
+import { erc721 } from '../typechain-types/@openzeppelin/contracts/token';
 
 // SETUP for faster mining
 network.provider.send('evm_setIntervalMining', [500]);
@@ -73,6 +81,60 @@ describe('Proposal scenarios', function () {
       const balanceOfProposal = await ethers.provider.getBalance(proposal.address);
       expect(balanceOfProposal).to.be.eq(0);
     });
+
+    // this test covers correctness of NFT asset type DAO transfer tx
+    it('should pass with 1:0 (only creator vote) - NFT transfer from DAO', async function () {
+      const {  dao, account, otherAccount } = await loadFixture(initializeErc20TokenAndDaoFixture);
+      const nftToken = await deployNftToken();
+      await (nftToken as ERC721Development).createNFT(dao.address, '');
+
+      LOGGER.info('1. Create send ERC20 tokens proposal');
+      const proposal = await createSendNftProposal(
+          dao,
+          nftToken.address,
+          generateRandomProposalId(),
+          generateRandomMerkleRoot(),
+          otherAccount.address,
+          1
+      );
+
+      await waitForProposalToEnd(proposal);
+
+      LOGGER.info('2. Verify proposal is passed and not executed');
+      await checkProposalIsPassed(proposal, true);
+      await checkProposalIsExecuted(proposal, false);
+
+      LOGGER.info('3. Verify accounts ERC20 token balances before executing proposal');
+      expect(await nftToken.balanceOf(dao.address)).to.eq(1);
+      expect(await nftToken.balanceOf(otherAccount.address)).to.eq(0);
+
+      LOGGER.info('4. Execute proposal');
+      await proposal.executeProposal();
+
+      LOGGER.info('5. Verify proposal is executed');
+      await checkProposalIsExecuted(proposal, true);
+
+      LOGGER.info('6. Verify accounts ERC20 token balances after executing proposal: DAO has less tokens, other account has more tokens');
+      expect(await nftToken.balanceOf(dao.address)).to.eq(0);
+      expect(await nftToken.balanceOf(otherAccount.address)).to.eq(1);
+
+      LOGGER.info('7. Get accounts balances before claiming reward');
+      const balanceOfAccountBefore = await ethers.provider.getBalance(account.address);
+
+      LOGGER.info('8. Claim rewards by all accounts');
+      await proposal.claimReward();
+
+      LOGGER.info('9. Get accounts balances after claiming reward');
+      const balanceOfAccountAfter = await ethers.provider.getBalance(account.address);
+
+      LOGGER.info('10. Expected creator balance: 1 ETH collateral back (no reward)');
+      expectBalanceDiffIsGte(balanceOfAccountBefore, balanceOfAccountAfter, 1);
+
+      LOGGER.info('11. Expected proposal balance is 0');
+      const balanceOfProposal = await ethers.provider.getBalance(proposal.address);
+      expect(balanceOfProposal).to.be.eq(0);
+    });
+
 
     it('should pass with 3:2 (3 votes for)', async function () {
       const { token, dao, account, otherAccount } = await loadFixture(initializeErc20TokenAndDaoFixture);
