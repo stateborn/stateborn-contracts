@@ -5,4 +5,3 @@ const logger = pino(pretty({ sync: false }));
 logger.level = 'debug';
 
 export const LOGGER = logger;
-

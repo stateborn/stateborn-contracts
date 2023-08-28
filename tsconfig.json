@@ -10,6 +10,6 @@
     "outDir": "dist",
     "types": ["@nomiclabs/hardhat-ethers"]
   },
-  "include": [   "./**/*.ts"],
+  "include": ["./**/*.ts"],
   "files": ["./hardhat.config.ts"]
 }

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./DaoPool.sol";
-import "../Proposal.sol";
+import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
+import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
+import '@openzeppelin/contracts/access/Ownable.sol';
+import './DaoPool.sol';
+import '../Proposal.sol';
 
-contract NFTDaoPool is DaoPool {
-
+contract NFTDaoPool is DaoPool, IERC721Receiver {
     ERC721 public token;
     mapping(address => uint256[]) public balances;
 
@@ -24,27 +24,34 @@ contract NFTDaoPool is DaoPool {
     }
 
     function withdraw(uint256 tokenId, address withdrawAddress) public {
-        require(voterActiveProposals[msg.sender] == 0, "User has active proposals");
+        require(voterActiveProposals[msg.sender] == 0, 'User has active proposals');
         uint256 index;
         uint256[] storage userTokenIds = balances[msg.sender];
-        for (uint256 i = 0; i < balances[msg.sender].length ; i++) {
+        bool found = false;
+        for (uint256 i = 0; i < balances[msg.sender].length; i++) {
             if (userTokenIds[i] == tokenId) {
                 index = userTokenIds[i];
                 token.safeTransferFrom(address(this), withdrawAddress, tokenId);
-                delete userTokenIds[i];
+                userTokenIds[i] = userTokenIds[userTokenIds.length - 1];
+                userTokenIds.pop();
+                found = true;
                 break;
             }
         }
-        emit TokensWithdrawn(msg.sender, address(token), tokenId, withdrawAddress);
+        if (!found) {
+            revert('Token not found');
+        } else {
+            emit TokensWithdrawn(msg.sender, address(token), tokenId, withdrawAddress);
+        }
     }
 
     function resolveProposal(address proposalAddress) public {
+        require(approvedProposals[proposalAddress], 'Proposal not approved');
         Proposal proposal = Proposal(proposalAddress);
-        require(proposal.isEnded(), "Proposal not ended");
-        address[] memory voters = proposal.isPassed() ? proposalForVoters[proposalAddress] : proposalAgainstVoters[proposalAddress];
-        uint256 toTransferAmount = 0;
-        for (uint256 i = 0; i < voters.length; i++) {
-            address voterAddress = voters[i];
+        require(proposal.isEnded(), 'Proposal not ended');
+        address[] memory lostSideVoters = proposal.isPassed() ? proposalAgainstVoters[proposalAddress] : proposalForVoters[proposalAddress];
+        for (uint256 i = 0; i < lostSideVoters.length; i++) {
+            address voterAddress = lostSideVoters[i];
             uint256[] memory userTokenIds = balances[voterAddress];
             for (uint256 k = 0; k < userTokenIds.length; k++) {
                 uint256 tokenId = userTokenIds[k];
@@ -53,12 +60,17 @@ contract NFTDaoPool is DaoPool {
             delete balances[voterAddress];
             voterActiveProposals[voterAddress] = 0;
         }
+        decreaseWonSideVotersProposals(proposal.isPassed(), proposalAddress);
         delete proposalForVoters[proposalAddress];
         delete proposalAgainstVoters[proposalAddress];
         delete approvedProposals[proposalAddress];
     }
 
-    function balanceOf(address account) override public view returns (uint256) {
+    function balanceOf(address account) public view override returns (uint256) {
         return balances[account].length;
+    }
+
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes memory data) external override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

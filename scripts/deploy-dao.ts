@@ -1,16 +1,15 @@
 import { ethers } from 'hardhat';
 
 async function main() {
+  const daoFactory = await ethers.deployContract('DAOFactory', []);
 
-    const daoFactory = await ethers.deployContract("DAOFactory", []);
-
-    await daoFactory.deployed();
-    console.log('dao factory address: ', daoFactory.address);
-    await daoFactory.createDao();
-    const listener = daoFactory.on('DAOCreated', (address) => {
-        console.log(`DAO created ${address}`)
-        listener.removeAllListeners();
-    });
+  await daoFactory.deployed();
+  console.log('dao factory address: ', daoFactory.address);
+  await daoFactory.createDao();
+  const listener = daoFactory.on('DAOCreated', (address) => {
+    console.log(`DAO created ${address}`);
+    listener.removeAllListeners();
+  });
 }
 
 // async function main() {
@@ -60,6 +59,6 @@ async function main() {
 // }
 
 main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
+  console.error(error);
+  process.exitCode = 1;
 });
