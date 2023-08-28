@@ -3,6 +3,7 @@ import { LOGGER } from './pino-logger-service';
 import { expect } from 'chai';
 import { Dao, Proposal } from '../../typechain-types';
 import { ERC_20_DECIMALS } from '../test-constants';
+import { parseEther } from 'ethers/lib/utils';
 
 export async function createSendErc20Proposal(
   dao: Dao,
@@ -30,6 +31,17 @@ export async function createSendNftProposal(
   return createProposalWithTokensTx(dao, proposalId, merkleRootHex, sendDaoTokensTx, ethCollateral);
 }
 
+export async function createSendEthCryptoProposal(
+    dao: Dao,
+    proposalId: Uint8Array,
+    merkleRootHex: string,
+    tokenReceiverAddress: string,
+    ethAmountToSend: number,
+    ethCollateral: string = '1'
+): Promise<Proposal> {
+  const sendDaoTokensTx = encodeSendCryptoTx(dao, proposalId, tokenReceiverAddress, ethAmountToSend);
+  return createProposalWithTokensTx(dao, proposalId, merkleRootHex, sendDaoTokensTx, ethCollateral);
+}
 
 export async function createProposalWithTokensTx(
   dao: Dao,
@@ -78,6 +90,20 @@ export const encodeSendNftTokenTx = (
     tokenId,
   ]);
 };
+
+export const encodeSendCryptoTx = (
+    dao: Dao,
+    proposalId: Uint8Array,
+    tokenReceiverAddress: string,
+    ethAmount: number
+): string => {
+  return dao.interface.encodeFunctionData('sendCrypto', [
+    proposalId,
+    tokenReceiverAddress,
+    parseEther(ethAmount.toString()),
+  ]);
+};
+
 
 
 export const checkProposalIsPassed = async (proposal: Proposal, expectedResult: boolean): Promise<void> => {
