@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 dotenv.config({ path: __dirname + '/.env' });
 const { COINMARKETCAP_API_KEY } = process.env;
 require('solidity-coverage');
+require("hardhat-contract-sizer");
 
 const config: HardhatUserConfig = {
   solidity: {

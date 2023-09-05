@@ -21,6 +21,7 @@
     "@openzeppelin/hardhat-upgrades": "^1.25.0",
     "dotenv": "^16.3.1",
     "hardhat": "^2.14.0",
+    "hardhat-contract-sizer": "^2.10.0",
     "hardhat-gas-reporter": "^1.0.9",
     "i": "^0.3.7",
     "npm": "^9.8.1",

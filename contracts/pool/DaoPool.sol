@@ -34,8 +34,7 @@ abstract contract DaoPool is IDaoPool, Ownable {
     function decreaseWonSideVotersProposals(bool isProposalPassed, address proposalAddress) internal {
         address[] memory wonSideVoters = isProposalPassed ? proposalForVoters[proposalAddress] : proposalAgainstVoters[proposalAddress];
         for (uint256 i = 0; i < wonSideVoters.length; i++) {
-            address voterAddress = wonSideVoters[i];
-            voterActiveProposals[voterAddress] -= 1;
+            voterActiveProposals[wonSideVoters[i]] -= 1;
         }
     }
 
@@ -45,5 +44,10 @@ abstract contract DaoPool is IDaoPool, Ownable {
 
     function getProposalAgainstVoters(address proposalAddress) public view returns (address[] memory) {
         return proposalAgainstVoters[proposalAddress];
+    }
+
+    modifier hasNoActiveProposals() {
+        require(voterActiveProposals[msg.sender] == 0, 'User has active proposals');
+        _;
     }
 }

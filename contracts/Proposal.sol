@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import './IProposalUserChallenge.sol';
-import './ProposalUserChallenge.sol';
-import './dao/Dao.sol';
 import './pool/IDaoPool.sol';
-import 'hardhat/console.sol';
 
 struct PollCard {
     uint256 nativeForVotes;
@@ -76,9 +72,8 @@ contract Proposal {
     }
 
     function voteWithToken(bool voteSide) public isInChallengePeriodMod {
-        uint256 userTokenBalance = daoPool.balanceOf(msg.sender);
-        uint256 votesCount = userTokenBalance / tokenCollateral;
-        require(votesCount > 0, 'Token collateral not enough');
+        uint256 votesCount = daoPool.balanceOf(msg.sender) / tokenCollateral;
+        require(votesCount > 0, 'Token collateral too small');
         PollCard storage pollCard = votes[msg.sender];
         bool firstVote = pollCard.tokenForVotes == 0 && pollCard.tokenAgainstVotes == 0;
         if (voteSide) {

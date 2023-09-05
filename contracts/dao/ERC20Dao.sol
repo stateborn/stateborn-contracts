@@ -5,6 +5,7 @@ import './Dao.sol';
 import '../pool/ERC20DaoPool.sol';
 
 contract ERC20Dao is Dao {
+
     ERC20DaoPool public daoPool;
 
     constructor(

@@ -5,6 +5,7 @@ import './Dao.sol';
 import '../pool/NFTDaoPool.sol';
 
 contract NFTDao is Dao {
+
     NFTDaoPool public daoPool;
 
     constructor(

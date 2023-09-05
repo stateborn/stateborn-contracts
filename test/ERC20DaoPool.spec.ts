@@ -15,7 +15,6 @@ import { createErc20DaoPool, depositTokensToPool } from './utils/dao-pool-utils'
 import { expect } from 'chai';
 import { ethers, network } from 'hardhat';
 import { createSendErc20Proposal } from './utils/proposal-utils';
-import exp from 'constants';
 
 const erc20DaoPoolFixture = async () => {
   const token = await deployErc20Token();

@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
-import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
+import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import './DaoPool.sol';
 import '../Proposal.sol';
 
 contract NFTDaoPool is DaoPool, IERC721Receiver {
-    ERC721 public token;
+    IERC721 public token;
     mapping(address => uint256[]) public balances;
 
     event TokensDeposited(address indexed user, address indexed tokenAddress, uint256 tokenId);
     event TokensWithdrawn(address indexed user, address indexed tokenAddress, uint256 tokenId, address indexed withdrawAddress);
 
     constructor(address _tokenAddress) {
-        token = ERC721(_tokenAddress);
+        token = IERC721(_tokenAddress);
     }
 
     function deposit(uint256 tokenId) public {
@@ -23,14 +23,11 @@ contract NFTDaoPool is DaoPool, IERC721Receiver {
         token.safeTransferFrom(msg.sender, address(this), tokenId);
     }
 
-    function withdraw(uint256 tokenId, address withdrawAddress) public {
-        require(voterActiveProposals[msg.sender] == 0, 'User has active proposals');
-        uint256 index;
+    function withdraw(uint256 tokenId, address withdrawAddress) public hasNoActiveProposals {
         uint256[] storage userTokenIds = balances[msg.sender];
         bool found = false;
         for (uint256 i = 0; i < balances[msg.sender].length; i++) {
             if (userTokenIds[i] == tokenId) {
-                index = userTokenIds[i];
                 token.safeTransferFrom(address(this), withdrawAddress, tokenId);
                 userTokenIds[i] = userTokenIds[userTokenIds.length - 1];
                 userTokenIds.pop();

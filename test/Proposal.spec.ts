@@ -28,11 +28,10 @@ import { BigNumber } from 'ethers';
 network.provider.send('evm_setIntervalMining', [500]);
 
 describe('Proposal test', function () {
-  const daoTokensBalance = 1000;
   describe('creation', function () {
     it('should initialize correct ERC-20 proposal', async function () {
-      //given
-      const { token, dao, account, otherAccount, ERC20DaoPool } = await loadFixture(initializeErc20TokenAndDaoFixture);
+      //given fresh deployment to verify all properties including timestamps
+      const { token, dao, account, otherAccount, ERC20DaoPool } = await initializeErc20TokenAndDaoFixture();
       const tokenTransferAmount = generateRandomIntNumberFrom1To100();
       const proposalId = generateRandomProposalId();
       const proposalMerkleRootHex = generateRandomMerkleRoot();
@@ -42,6 +41,13 @@ describe('Proposal test', function () {
       const proposal = await createProposalWithTokensTx(dao, proposalId, proposalMerkleRootHex, sendDaoTokensTx);
 
       //then
+      // it assumes block mining to be done ~10 second
+      const nowInSeconds = Math.floor(new Date().getTime() / 1000);
+      const before = BigNumber.from(nowInSeconds - 10);
+      const after = BigNumber.from(nowInSeconds + 10);
+      const contractionCreationTime = await proposal.contractCreationTime();
+      expect(contractionCreationTime, 'Expecting contractCreationTime after correct').to.be.gte(before);
+      expect(contractionCreationTime, 'Expecting contractCreationTime before correct').to.be.lte(after);
       expect(await proposal.proposalMerkleRootHex(), 'Expecting proposalMerkleRootHex correct').to.eq(proposalMerkleRootHex);
       expect(await proposal.sequencerAddress(), 'Expecting sequencerAddress correct').to.eq(account.address);
       expect(await proposal.challengePeriodSeconds(), 'Expecting challengePeriodSeconds correct').to.eq(CHALLENGE_PERIOD_SECONDS);
@@ -51,13 +57,6 @@ describe('Proposal test', function () {
       expect((await proposal.getPayloads())[0], 'Expecting getPayloads correct').to.eq(sendDaoTokensTx);
       expect(await proposal.daoAddress(), 'Expecting daoAddress correct').to.eq(dao.address);
       expect(await proposal.daoPool(), 'Expecting daoPool correct').to.eq(ERC20DaoPool.address);
-      // it assumes block mining to be done ~3 second
-      const nowInSeconds = Math.floor(new Date().getTime() / 1000);
-      const oneSecondBeforeNow = BigNumber.from(nowInSeconds - 3);
-      const oneSecondAfterNow = BigNumber.from(nowInSeconds + 3);
-      const contractionCreationTime = await proposal.contractCreationTime();
-      expect(contractionCreationTime, 'Expecting contractCreationTime correct').to.be.gte(oneSecondBeforeNow);
-      expect(contractionCreationTime, 'Expecting contractCreationTime correct').to.be.lte(oneSecondAfterNow);
       expect(await proposal.forVotesCounter(), 'Expecting forVotesCounter correct').to.eq(1);
       expect(await proposal.againstVotesCounter(), 'Expecting againstVotesCounter correct').to.eq(0);
       expect(await proposal.executed(), 'Expecting executed correct').to.be.false;

@@ -22,8 +22,7 @@ contract ERC20DaoPool is DaoPool {
         require(token.transferFrom(msg.sender, address(this), amount), 'Transfer failed');
     }
 
-    function withdraw(uint256 amount, address withdrawAddress) public {
-        require(voterActiveProposals[msg.sender] == 0, 'User has active proposals');
+    function withdraw(uint256 amount, address withdrawAddress) public hasNoActiveProposals {
         require(balances[msg.sender] >= amount, 'Insufficient balance');
         require(token.transfer(withdrawAddress, amount), 'Transfer failed');
         balances[msg.sender] -= amount;
