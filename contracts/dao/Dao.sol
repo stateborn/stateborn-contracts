@@ -10,7 +10,8 @@ import '../pool/DaoPool.sol';
 import "hardhat/console.sol";
 
 abstract contract Dao is ReentrancyGuard, IERC721Receiver {
-    mapping(bytes => Proposal) private proposals;
+
+    mapping(bytes => Proposal) public proposals;
     uint256 public tokenCollateral;
     uint256 public challengePeriodSeconds;
     uint256 public nativeCollateral;
