@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy-dao-factories-local": "npx hardhat run --network local  scripts/deploy-dao-factories.ts",
+    "deploy-dev-tokens-local": "npx hardhat run --network local  scripts/deploy-development-tokens.ts",
+    "send-tokens-to-dao-local": "npx hardhat run --network local  scripts/send-to-dao.ts"
   },
   "keywords": [],
   "author": "",

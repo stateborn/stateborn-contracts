@@ -1,27 +1,31 @@
 import { ethers } from 'hardhat';
 import { Contract } from 'ethers';
+import { readFileSync } from 'fs';
 
 async function main() {
-  //TODO provide dao address
-  const daoAddress = '0xa8aFC8e510393213ea6c181c37bf273718e7C353';
-  const a = ['function transfer(address recipient, uint256 amount) external returns (bool)'];
-  //token address
-  //TODO provide token address
-  const contract = new Contract('0x9931e9395c7700F1b017Fd9CfC0D56c250000727', a, ethers.provider.getSigner());
+  // TODO provide dao address
+  const daoAddress = '0xA6FE3d32e2685E9A1Cb95a718b01160f1FF95e39';
 
-  await contract.transfer(daoAddress, ethers.utils.parseUnits('100', 21));
+  const abi = ['function transfer(address recipient, uint256 amount) external returns (bool)'];
+  const nftAbi = ['function createNFT(address,string) external returns (uint256)'];
 
-  console.log(`Transfer 100 tokens to DAO: ${daoAddress}`);
+  let file;
+  try {
+    file = JSON.parse(readFileSync('deployments/dev-tokens-local.json', 'utf8'));
+  } catch (e) {
+    console.log('No local deployment done! Deploy tokens first!');
+    return;
+  }
+  const contract = new Contract(file.erc20Address, abi, ethers.provider.getSigner());
+  await contract.transfer(daoAddress, ethers.utils.parseUnits('100', 18));
+  console.log(`Transferred 100 tokens to DAO: ${daoAddress}`);
 
-  const token = await ethers.deployContract('ERC721Development');
-  await token.deployed();
-
-  console.log(`NFT deployed to ${token.address}`);
+  const nft = new Contract(file.nftAddress, nftAbi, ethers.provider.getSigner());
   const signer = (await ethers.getSigners())[0];
-  await token.createNFT(signer.address, 'https://arweave.net/gTzo012IdW-2nYxsWdX4y1jB4eC7ZljT4oBO9AFrJZ8\n');
-  console.log(`Created NFT for ${signer.address}`);
-  await token.createNFT(daoAddress, 'https://arweave.net/gTzo012IdW-2nYxsWdX4y1jB4eC7ZljT4oBO9AFrJZ8\n');
-  console.log(`Created NFT for ${daoAddress}`);
+  await nft.createNFT(signer.address, 'https://arweave.net/gTzo012IdW-2nYxsWdX4y1jB4eC7ZljT4oBO9AFrJZ8\n');
+  console.log(`Created NFT 0 for ${signer.address}`);
+  await nft.createNFT(daoAddress, 'https://arweave.net/gTzo012IdW-2nYxsWdX4y1jB4eC7ZljT4oBO9AFrJZ8\n');
+  console.log(`Created NFT 1 for DAO ${daoAddress}`);
 }
 
 main().catch((error) => {

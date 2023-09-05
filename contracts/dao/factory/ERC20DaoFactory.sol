@@ -6,7 +6,7 @@ import "../ERC20Dao.sol";
 
 contract ERC20DaoFactory is DaoFactory {
 
-    function initializeDao(address tokenAddress, uint256 tokenCollateral) override public returns (Dao) {
+    function initializeDao(address tokenAddress, uint256 tokenCollateral) override internal returns (Dao) {
         return new ERC20Dao(tokenAddress, tokenCollateral, defaultChallengePeriodSeconds, nativeCollateral);
     }
 }

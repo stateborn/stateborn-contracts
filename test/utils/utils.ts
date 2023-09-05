@@ -28,9 +28,6 @@ export async function deployNftToken(): Promise<ERC721> {
 
 export async function deployErc20Dao(tokenAddress: string, challengePeriodSeconds: number): Promise<{ dao: ERC20Dao; ERC20DaoPool: ERC20DaoPool }> {
   const dao = (await ethers.deployContract('ERC20Dao', [tokenAddress, TOKEN_COLLATERAL, challengePeriodSeconds, NATIVE_COLLATERAL])) as ERC20Dao;
-  dao.on('DaoPoolCreated', (poolAddress: string) => {
-    LOGGER.debug(`ERC20 DAO pool created at ${poolAddress}`);
-  });
   await dao.deployed();
   // @dev there was a problem with .on listener and it didn't work for multiple tests
   const result = await dao.deployTransaction.wait();
@@ -45,9 +42,6 @@ export async function deployErc20Dao(tokenAddress: string, challengePeriodSecond
 
 export async function deployNftDao(tokenAddress: string, challengePeriodSeconds: number): Promise<{ dao: NFTDao; NFTDaoPool: NFTDaoPool }> {
   const dao = (await ethers.deployContract('NFTDao', [tokenAddress, TOKEN_NFT_COLLATERAL, challengePeriodSeconds, NATIVE_COLLATERAL])) as NFTDao;
-  dao.on('DaoPoolCreated', (poolAddress: string) => {
-    LOGGER.debug(`NFT DAO pool created at ${poolAddress}`);
-  });
   await dao.deployed();
   // @dev there was a problem with .on listener and it didn't work for multiple tests
   const result = await dao.deployTransaction.wait();
