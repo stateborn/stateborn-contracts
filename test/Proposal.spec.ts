@@ -32,8 +32,8 @@ describe('Proposal test', function () {
             //given fresh deployment to verify all properties including timestamps
             const {token, dao, account, otherAccount, ERC20DaoPool} = await initializeErc20TokenAndDaoFixture();
             const tokenAddress = await token.getAddress();
-            const daoAddress = dao.getAddress();
-            const erc20DaoPoolAddress = ERC20DaoPool.getAddress();
+            const daoAddress = await dao.getAddress();
+            const erc20DaoPoolAddress = await ERC20DaoPool.getAddress();
             const tokenTransferAmount = generateRandomIntNumberFrom1To100();
             const proposalId = generateRandomProposalId();
             const proposalMerkleRootHex = generateRandomMerkleRoot();

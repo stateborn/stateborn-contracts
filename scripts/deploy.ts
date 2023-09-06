@@ -6,7 +6,7 @@ async function main() {
   const name = 'My token';
   const symbol = 'TOKEN';
   const decimals = 21;
-  const totalSupply = ethers.utils.parseUnits('10000', decimals);
+  const totalSupply = ethers.parseUnits('10000', decimals);
   // metamask account
   const transferToAddress = '0xF4A87e028d06c0aB13FF4630CA1f84b28a91Fa60';
 

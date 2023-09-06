@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 
 async function main() {
   // TODO provide dao address
-  const daoAddress = '0xB038947c5D187AAB3b7B48d20eCdb3d069263212';
+  const daoAddress = '0x6B210B06aA3DB990cBDA03C4de389988eFf6b860';
 
   const abi = ['function transfer(address recipient, uint256 amount) external returns (bool)'];
   const nftAbi = ['function createNFT(address,string) external returns (uint256)'];
@@ -16,16 +16,17 @@ async function main() {
     console.log('No local deployment done! Deploy tokens first!');
     return;
   }
-  const contract = new Contract(file.erc20Address, abi, ethers.provider.getSigner());
-  await contract.transfer(daoAddress, ethers.utils.parseUnits('100', 18));
+  const signer = await ethers.provider.getSigner();
+  const contract = new Contract(file.erc20Address, abi, signer);
+  await contract.transfer(daoAddress, ethers.parseUnits('100', 18));
   console.log(`Transferred 100 tokens to DAO: ${daoAddress}`);
 
-  const nft = new Contract(file.nftAddress, nftAbi, ethers.provider.getSigner());
-  const signer = (await ethers.getSigners())[0];
+  const nft = new Contract(file.nftAddress, nftAbi, signer);
   await nft.createNFT(signer.address, 'https://arweave.net/gTzo012IdW-2nYxsWdX4y1jB4eC7ZljT4oBO9AFrJZ8\n');
   console.log(`Created NFT 0 for ${signer.address}`);
   await nft.createNFT(daoAddress, 'https://arweave.net/gTzo012IdW-2nYxsWdX4y1jB4eC7ZljT4oBO9AFrJZ8\n');
   console.log(`Created NFT 1 for DAO ${daoAddress}`);
+  console.log('Done!');
 }
 
 main().catch((error) => {
