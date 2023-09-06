@@ -3,7 +3,6 @@ import { LOGGER } from './pino-logger-service';
 import { expect } from 'chai';
 import { Dao, Proposal } from '../../typechain-types';
 import { ERC_20_DECIMALS } from '../test-constants';
-import { parseEther } from 'ethers/lib/utils';
 
 export async function createSendErc20Proposal(
   dao: Dao,
@@ -51,13 +50,14 @@ export async function createProposalWithTokensTx(
   ethCollateralToSendToProposal: string = '1'
 ): Promise<Proposal> {
   const tx = await dao.createProposal(proposalId, merkleRootHex, [sendDaoTokensTx], {
-    value: ethers.utils.parseEther(ethCollateralToSendToProposal),
+    value: ethers.parseEther(ethCollateralToSendToProposal),
   });
   // @dev there was a problem with .on listener and it didn't work for multiple tests
   // @dev so i replaced it with this workaround of getting events from tx
   const result = await tx.wait();
   LOGGER.debug(`Created DAO proposal`);
-  return (await ethers.getContractAt('Proposal', result.events[0].args.proposalAddress)) as Proposal;
+  // @ts-ignore
+  return (await ethers.getContractAt('Proposal', result.logs[0].args.proposalAddress)) as Proposal;
 }
 
 
@@ -72,7 +72,7 @@ export const encodeSendErc20TokensTx = (
     proposalId,
     tokenAddress,
     tokenReceiverAddress,
-    ethers.utils.parseUnits(tokenTransferAmount, ERC_20_DECIMALS),
+    ethers.parseUnits(tokenTransferAmount, ERC_20_DECIMALS),
   ]);
 };
 
@@ -100,7 +100,7 @@ export const encodeSendCryptoTx = (
   return dao.interface.encodeFunctionData('sendCrypto', [
     proposalId,
     tokenReceiverAddress,
-    parseEther(ethAmount.toString()),
+    ethers.parseEther(ethAmount.toString()),
   ]);
 };
 
@@ -119,7 +119,7 @@ export const checkProposalIsExecuted = async (proposal: Proposal, expectedResult
 export const voteOnProposalWithCollateral = async (proposal: Proposal, vote: boolean, ethCollateralInt: number): Promise<void> => {
   LOGGER.debug(`Voting '${vote}' on proposal with collateral '${ethCollateralInt}'`);
   await proposal.vote(vote, {
-    value: ethers.utils.parseEther(ethCollateralInt.toFixed(0)),
+    value: ethers.parseEther(ethCollateralInt.toFixed(0)),
   });
 };
 

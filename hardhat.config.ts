@@ -1,7 +1,6 @@
 import 'hardhat-gas-reporter';
 import { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
-require('@openzeppelin/hardhat-upgrades');
 const dotenv = require('dotenv');
 dotenv.config({ path: __dirname + '/.env' });
 const { COINMARKETCAP_API_KEY } = process.env;

@@ -8,7 +8,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "outDir": "dist",
-    "types": ["@nomiclabs/hardhat-ethers"]
+    "types": ["@nomiclabs/hardhat-ethers", "typechain-types"]
   },
   "include": ["./**/*.ts"],
   "files": ["./hardhat.config.ts"]

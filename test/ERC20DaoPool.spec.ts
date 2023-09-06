@@ -36,23 +36,25 @@ describe('ERC20DaoPool test', function () {
     it('should deposit ERC-20 tokens to pool', async function () {
       //given
       const { daoPool, token, account } = await loadFixture(erc20DaoPoolFixture);
-      await token.approve(daoPool.address, parseTokensUnits(1));
-      expect(await token.balanceOf(daoPool.address)).to.eq(parseTokensUnits(0));
+      const daoPoolAddress = await daoPool.getAddress();
+      await token.approve(daoPoolAddress, parseTokensUnits(1));
+      expect(await token.balanceOf(daoPoolAddress)).to.eq(parseTokensUnits(0));
       expect(await daoPool.balanceOf(account.address)).to.eq(parseTokensUnits(0));
 
       //when
       await daoPool.deposit(parseTokensUnits(1));
 
       //then
-      expect(await token.balanceOf(daoPool.address)).to.eq(parseTokensUnits(1));
+      expect(await token.balanceOf(daoPoolAddress)).to.eq(parseTokensUnits(1));
       expect(await daoPool.balanceOf(account.address)).to.eq(parseTokensUnits(1));
     });
 
     it('should deposit multiple times ERC-20 tokens to pool', async function () {
       //given
       const { daoPool, token, account } = await loadFixture(erc20DaoPoolFixture);
-      await token.approve(daoPool.address, parseTokensUnits(3));
-      expect(await token.balanceOf(daoPool.address)).to.eq(parseTokensUnits(0));
+      const daoPoolAddress = await daoPool.getAddress();
+      await token.approve(daoPoolAddress, parseTokensUnits(3));
+      expect(await token.balanceOf(daoPoolAddress)).to.eq(parseTokensUnits(0));
       expect(await daoPool.balanceOf(account.address)).to.eq(parseTokensUnits(0));
 
       //when
@@ -61,7 +63,7 @@ describe('ERC20DaoPool test', function () {
       await daoPool.deposit(parseTokensUnits(1));
 
       //then
-      expect(await token.balanceOf(daoPool.address)).to.eq(parseTokensUnits(3));
+      expect(await token.balanceOf(daoPoolAddress)).to.eq(parseTokensUnits(3));
       expect(await daoPool.balanceOf(account.address)).to.eq(parseTokensUnits(3));
     });
   });
@@ -78,8 +80,9 @@ describe('ERC20DaoPool test', function () {
     it('should vote for on proposal', async function () {
       //given
       const { daoPool, token, account } = await loadFixture(erc20DaoPoolFixture);
+      const daoPoolAddress = await daoPool.getAddress();
       const proposal = (await ethers.getSigners())[1];
-      await token.approve(daoPool.address, parseTokensUnits(1));
+      await token.approve(daoPoolAddress, parseTokensUnits(1));
       await daoPool.deposit(parseTokensUnits(1));
       await daoPool.approveProposal(proposal.address);
 
@@ -96,8 +99,9 @@ describe('ERC20DaoPool test', function () {
     it('should vote against on proposal', async function () {
       //given
       const { daoPool, token, account } = await loadFixture(erc20DaoPoolFixture);
+      const daoPoolAddress = await daoPool.getAddress();
       const proposal = (await ethers.getSigners())[1];
-      await token.approve(daoPool.address, parseTokensUnits(1));
+      await token.approve(daoPoolAddress, parseTokensUnits(1));
       await daoPool.deposit(parseTokensUnits(1));
       await daoPool.approveProposal(proposal.address);
 
@@ -114,8 +118,9 @@ describe('ERC20DaoPool test', function () {
     it('should revert when vote twice', async function () {
       //given
       const { daoPool, token, account } = await loadFixture(erc20DaoPoolFixture);
+      const daoPoolAddress = await daoPool.getAddress();
       const proposal = (await ethers.getSigners())[1];
-      await token.approve(daoPool.address, parseTokensUnits(1));
+      await token.approve(daoPoolAddress, parseTokensUnits(1));
       await daoPool.deposit(parseTokensUnits(1));
       await daoPool.approveProposal(proposal.address);
       const proposalDaoPool = daoPool.connect(proposal);
@@ -140,7 +145,8 @@ describe('ERC20DaoPool test', function () {
     it('should revert when withdraw token amount too big', async function () {
       //given
       const { daoPool, token, account } = await loadFixture(erc20DaoPoolFixture);
-      await token.approve(daoPool.address, parseTokensUnits(10));
+      const daoPoolAddress = await daoPool.getAddress();
+      await token.approve(daoPoolAddress, parseTokensUnits(10));
       await daoPool.deposit(parseTokensUnits(10));
 
       //when and then
@@ -150,8 +156,9 @@ describe('ERC20DaoPool test', function () {
     it('should revert when user (msg.sender) votes in active proposals', async function () {
       //given
       const { daoPool, token, account } = await loadFixture(erc20DaoPoolFixture);
+      const daoPoolAddress = await daoPool.getAddress();
       const proposal = (await ethers.getSigners())[1];
-      await token.approve(daoPool.address, parseTokensUnits(1));
+      await token.approve(daoPoolAddress, parseTokensUnits(1));
       await daoPool.deposit(parseTokensUnits(1));
       await daoPool.approveProposal(proposal.address);
       const proposalDaoPool = daoPool.connect(proposal);
@@ -164,11 +171,12 @@ describe('ERC20DaoPool test', function () {
     it('should withdraw some of user (msg.sender) tokens in pool', async function () {
       //given
       const { daoPool, token, account } = await loadFixture(erc20DaoPoolFixture);
+      const daoPoolAddress = await daoPool.getAddress();
       const proposal = (await ethers.getSigners())[1];
-      await token.approve(daoPool.address, parseTokensUnits(10));
+      await token.approve(daoPoolAddress, parseTokensUnits(10));
       await daoPool.deposit(parseTokensUnits(10));
       await daoPool.approveProposal(proposal.address);
-      expect(await token.balanceOf(daoPool.address)).to.eq(parseTokensUnits(10));
+      expect(await token.balanceOf(daoPoolAddress)).to.eq(parseTokensUnits(10));
       expect(await daoPool.balanceOf(account.address)).to.eq(parseTokensUnits(10));
 
       const accountTokensBalanceBefore = await token.balanceOf(account.address);
@@ -177,20 +185,21 @@ describe('ERC20DaoPool test', function () {
       await daoPool.withdraw(parseTokensUnits(3), account.address);
 
       //then
-      expect(await token.balanceOf(daoPool.address)).to.eq(parseTokensUnits(7));
+      expect(await token.balanceOf(daoPoolAddress)).to.eq(parseTokensUnits(7));
       expect(await daoPool.balanceOf(account.address)).to.eq(parseTokensUnits(7));
       const accountTokensBalanceAfter = await token.balanceOf(account.address);
-      expect(accountTokensBalanceAfter.sub(accountTokensBalanceBefore)).to.eq(parseTokensUnits(3));
+      expect(accountTokensBalanceAfter - accountTokensBalanceBefore).to.eq(parseTokensUnits(3));
     });
 
     it('should withdraw all of user (msg.sender) when withdraw half of tokens twice ', async function () {
       //given
       const { daoPool, token, account } = await loadFixture(erc20DaoPoolFixture);
+      const daoPoolAddress = await daoPool.getAddress();
       const proposal = (await ethers.getSigners())[1];
-      await token.approve(daoPool.address, parseTokensUnits(10));
+      await token.approve(daoPoolAddress, parseTokensUnits(10));
       await daoPool.deposit(parseTokensUnits(10));
       await daoPool.approveProposal(proposal.address);
-      expect(await token.balanceOf(daoPool.address)).to.eq(parseTokensUnits(10));
+      expect(await token.balanceOf(daoPoolAddress)).to.eq(parseTokensUnits(10));
       expect(await daoPool.balanceOf(account.address)).to.eq(parseTokensUnits(10));
 
       const accountTokensBalanceBefore = await token.balanceOf(account.address);
@@ -200,10 +209,10 @@ describe('ERC20DaoPool test', function () {
       await daoPool.withdraw(parseTokensUnits(6), account.address);
 
       //then
-      expect(await token.balanceOf(daoPool.address)).to.eq(parseTokensUnits(0));
+      expect(await token.balanceOf(daoPoolAddress)).to.eq(parseTokensUnits(0));
       expect(await daoPool.balanceOf(account.address)).to.eq(parseTokensUnits(0));
       const accountTokensBalanceAfter = await token.balanceOf(account.address);
-      expect(accountTokensBalanceAfter.sub(accountTokensBalanceBefore)).to.eq(parseTokensUnits(10));
+      expect(accountTokensBalanceAfter -accountTokensBalanceBefore).to.eq(parseTokensUnits(10));
     });
   });
 
@@ -220,9 +229,11 @@ describe('ERC20DaoPool test', function () {
     it('should revert when proposal not ended yet', async function () {
       //given
       const { token, dao, account, otherAccount, ERC20DaoPool } = await loadFixture(initializeErc20TokenAndDaoFixture);
+      const tokenAddress = await token.getAddress();
+
       const proposal = await createSendErc20Proposal(
         dao,
-        token.address,
+        tokenAddress,
         generateRandomProposalId(),
         generateRandomMerkleRoot(),
         otherAccount.address,
@@ -231,15 +242,18 @@ describe('ERC20DaoPool test', function () {
       );
 
       //when and then
-      await expect(ERC20DaoPool.resolveProposal(proposal.address)).to.revertedWith('Proposal not ended');
+      const proposalAddress = await proposal.getAddress();
+      await expect(ERC20DaoPool.resolveProposal(proposalAddress)).to.revertedWith('Proposal not ended');
     });
 
     it('should resolve proposal without token votes', async function () {
       //given
       const { token, dao, account, otherAccount, ERC20DaoPool } = await loadFixture(initializeErc20TokenAndDaoFixture);
+      const tokenAddress = await token.getAddress();
+
       const proposal = await createSendErc20Proposal(
         dao,
-        token.address,
+        tokenAddress,
         generateRandomProposalId(),
         generateRandomMerkleRoot(),
         otherAccount.address,
@@ -247,48 +261,52 @@ describe('ERC20DaoPool test', function () {
         '5'
       );
       await waitForProposalToEnd(proposal);
-      expect(await ERC20DaoPool.approvedProposals(proposal.address)).to.eq(true);
+      const proposalAddress = await proposal.getAddress();
+      expect(await ERC20DaoPool.approvedProposals(proposalAddress)).to.eq(true);
 
       //when
-      await ERC20DaoPool.resolveProposal(proposal.address);
+      await ERC20DaoPool.resolveProposal(proposalAddress);
 
       //then
-      expect((await ERC20DaoPool.getProposalForVoters(proposal.address)).length).to.eq(0);
-      expect((await ERC20DaoPool.getProposalAgainstVoters(proposal.address)).length).to.eq(0);
-      expect(await ERC20DaoPool.approvedProposals(proposal.address)).to.eq(false);
+      expect((await ERC20DaoPool.getProposalForVoters(proposalAddress)).length).to.eq(0);
+      expect((await ERC20DaoPool.getProposalAgainstVoters(proposalAddress)).length).to.eq(0);
+      expect(await ERC20DaoPool.approvedProposals(proposalAddress)).to.eq(false);
       expect(await ERC20DaoPool.voterActiveProposals(account.address)).to.eq(0);
-      expect(await ERC20DaoPool.balanceOf(proposal.address)).to.eq(parseTokensUnits(0));
+      expect(await ERC20DaoPool.balanceOf(proposalAddress)).to.eq(parseTokensUnits(0));
     });
 
     it('should resolve proposal with token vote for won side', async function () {
       //given
       const { token, dao, account, otherAccount, ERC20DaoPool } = await loadFixture(initializeErc20TokenAndDaoFixture);
+      const tokenAddress = await token.getAddress();
       const proposal = await createSendErc20Proposal(
         dao,
-        token.address,
+        tokenAddress,
         generateRandomProposalId(),
         generateRandomMerkleRoot(),
         otherAccount.address,
         generateRandomIntNumberFrom1To100(),
         '5'
       );
-      await approveErc20(token, ERC20DaoPool.address, 100);
+      const erc20DaoPoolAddress = await ERC20DaoPool.getAddress();
+      const proposalAddress = await proposal.getAddress();
+      await approveErc20(token, erc20DaoPoolAddress, 100);
       await depositTokensToPool(ERC20DaoPool, 100);
       await proposal.voteWithToken(true);
       await waitForProposalToEnd(proposal);
-      expect((await ERC20DaoPool.getProposalForVoters(proposal.address)).length).to.eq(1);
-      expect((await ERC20DaoPool.getProposalAgainstVoters(proposal.address)).length).to.eq(0);
-      expect(await ERC20DaoPool.approvedProposals(proposal.address)).to.eq(true);
+      expect((await ERC20DaoPool.getProposalForVoters(proposalAddress)).length).to.eq(1);
+      expect((await ERC20DaoPool.getProposalAgainstVoters(proposalAddress)).length).to.eq(0);
+      expect(await ERC20DaoPool.approvedProposals(proposalAddress)).to.eq(true);
       expect(await ERC20DaoPool.voterActiveProposals(account.address)).to.eq(1);
       expect(await ERC20DaoPool.balanceOf(account.address)).to.eq(parseTokensUnits(100));
 
       //when
-      await ERC20DaoPool.resolveProposal(proposal.address);
+      await ERC20DaoPool.resolveProposal(proposalAddress);
 
       //then
-      expect((await ERC20DaoPool.getProposalForVoters(proposal.address)).length).to.eq(0);
-      expect((await ERC20DaoPool.getProposalAgainstVoters(proposal.address)).length).to.eq(0);
-      expect(await ERC20DaoPool.approvedProposals(proposal.address)).to.eq(false);
+      expect((await ERC20DaoPool.getProposalForVoters(proposalAddress)).length).to.eq(0);
+      expect((await ERC20DaoPool.getProposalAgainstVoters(proposalAddress)).length).to.eq(0);
+      expect(await ERC20DaoPool.approvedProposals(proposalAddress)).to.eq(false);
       expect(await ERC20DaoPool.voterActiveProposals(account.address)).to.eq(0);
       expect(await ERC20DaoPool.balanceOf(account.address)).to.eq(parseTokensUnits(100));
     });
@@ -296,51 +314,55 @@ describe('ERC20DaoPool test', function () {
     it('should resolve proposal with token vote for lost side (voter loose everything)', async function () {
       //given
       const { token, dao, account, otherAccount, ERC20DaoPool } = await loadFixture(initializeErc20TokenAndDaoFixture);
+      const tokenAddress = await token.getAddress();
       const proposal = await createSendErc20Proposal(
         dao,
-        token.address,
+        tokenAddress,
         generateRandomProposalId(),
         generateRandomMerkleRoot(),
         otherAccount.address,
         generateRandomIntNumberFrom1To100(),
         '5'
       );
-      await approveErc20(token, ERC20DaoPool.address, 300);
+      const erc20DaoPoolAddress = await ERC20DaoPool.getAddress();
+      await approveErc20(token, erc20DaoPoolAddress, 300);
       await depositTokensToPool(ERC20DaoPool, 300);
       await proposal.voteWithToken(true);
       await transferERC20TokensToAddress(token, otherAccount.address, 200);
       const tokenByOtherAccount = token.connect(otherAccount);
-      await approveErc20(tokenByOtherAccount, ERC20DaoPool.address, 200);
+      await approveErc20(tokenByOtherAccount, erc20DaoPoolAddress, 200);
       const daoPoolByOtherAccount = ERC20DaoPool.connect(otherAccount);
       await depositTokensToPool(daoPoolByOtherAccount, 200);
       const proposalByOtherAccount = proposal.connect(otherAccount);
       await proposalByOtherAccount.voteWithToken(false);
 
       await waitForProposalToEnd(proposal);
-      expect((await ERC20DaoPool.getProposalForVoters(proposal.address)).length).to.eq(1);
-      expect((await ERC20DaoPool.getProposalAgainstVoters(proposal.address)).length).to.eq(1);
-      expect(await ERC20DaoPool.approvedProposals(proposal.address)).to.eq(true);
+      const proposalAddress = await proposal.getAddress();
+      expect((await ERC20DaoPool.getProposalForVoters(proposalAddress)).length).to.eq(1);
+      expect((await ERC20DaoPool.getProposalAgainstVoters(proposalAddress)).length).to.eq(1);
+      expect(await ERC20DaoPool.approvedProposals(proposalAddress)).to.eq(true);
       expect(await ERC20DaoPool.voterActiveProposals(account.address)).to.eq(1);
       expect(await ERC20DaoPool.voterActiveProposals(otherAccount.address)).to.eq(1);
       expect(await ERC20DaoPool.balanceOf(account.address)).to.eq(parseTokensUnits(300));
       expect(await ERC20DaoPool.balanceOf(otherAccount.address)).to.eq(parseTokensUnits(200));
-      const tokensBalanceOfDaoBeforeResolveProposal = await token.balanceOf(dao.address);
+      const daoAddress = await dao.getAddress();
+      const tokensBalanceOfDaoBeforeResolveProposal = await token.balanceOf(daoAddress);
 
       //when
-      await ERC20DaoPool.resolveProposal(proposal.address);
+      await ERC20DaoPool.resolveProposal(proposalAddress);
 
       //then
-      expect((await ERC20DaoPool.getProposalForVoters(proposal.address)).length).to.eq(0);
-      expect((await ERC20DaoPool.getProposalAgainstVoters(proposal.address)).length).to.eq(0);
-      expect(await ERC20DaoPool.approvedProposals(proposal.address)).to.eq(false);
+      expect((await ERC20DaoPool.getProposalForVoters(proposalAddress)).length).to.eq(0);
+      expect((await ERC20DaoPool.getProposalAgainstVoters(proposalAddress)).length).to.eq(0);
+      expect(await ERC20DaoPool.approvedProposals(proposalAddress)).to.eq(false);
       expect(await ERC20DaoPool.voterActiveProposals(account.address)).to.eq(0);
       expect(await ERC20DaoPool.voterActiveProposals(otherAccount.address)).to.eq(0);
       expect(await ERC20DaoPool.balanceOf(account.address)).to.eq(parseTokensUnits(300));
       expect(await ERC20DaoPool.balanceOf(otherAccount.address)).to.eq(parseTokensUnits(0));
       expect(await token.balanceOf(otherAccount.address)).to.eq(parseTokensUnits(0));
       // dao receives lost user tokens
-      const tokensBalanceOfDaoAfterResolveProposal = await token.balanceOf(dao.address);
-      expect(tokensBalanceOfDaoAfterResolveProposal.sub(tokensBalanceOfDaoBeforeResolveProposal)).to.eq(parseTokensUnits(200));
+      const tokensBalanceOfDaoAfterResolveProposal = await token.balanceOf(daoAddress);
+      expect(tokensBalanceOfDaoAfterResolveProposal - tokensBalanceOfDaoBeforeResolveProposal).to.eq(parseTokensUnits(200));
     });
   });
 });
