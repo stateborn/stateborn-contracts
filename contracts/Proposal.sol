@@ -117,8 +117,13 @@ contract Proposal {
         executed = true;
         for (uint256 i = 0; i < payloads.length; ++i) {
             bytes memory payload = payloads[i];
-            (bool success, ) = daoAddress.call(payload);
+            (bool success,) = daoAddress.call(payload);
             require(success, 'Proposal: underlying transaction reverted');
+        }
+        if (againstVotesCounter == 0) {
+            PollCard memory pollCard = votes[sequencerAddress];
+            delete votes[sequencerAddress];
+            payable(sequencerAddress).transfer(pollCard.nativeForVotes * nativeCollateral);
         }
     }
 

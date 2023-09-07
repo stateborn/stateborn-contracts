@@ -56,24 +56,24 @@ describe('Proposal scenarios', function () {
             await expectTokenBalanceToEq(token, daoAddress, daoTokensBalance);
             await expectTokenBalanceToEq(token, otherAccount.address, 0);
 
-            LOGGER.info('4. Execute proposal');
+            LOGGER.info('4. Get accounts balances before claiming reward');
+            const balanceOfAccountBefore = await ethers.provider.getBalance(account.address);
+
+            LOGGER.info('5. Execute proposal');
             await proposal.executeProposal();
 
-            LOGGER.info('5. Verify proposal is executed');
+            LOGGER.info('6. Verify proposal is executed');
             await checkProposalIsExecuted(proposal, true);
 
-            LOGGER.info('6. Verify accounts ERC20 token balances after executing proposal: DAO has less tokens, other account has more tokens');
+            LOGGER.info('7. Get accounts balances after claiming reward');
+            const balanceOfAccountAfter = await ethers.provider.getBalance(account.address);
+
+            LOGGER.info('8. Verify accounts ERC20 token balances after executing proposal: DAO has less tokens, other account has more tokens');
             await expectTokenBalanceToEq(token, daoAddress, daoTokensBalance - Number(tokenTransferAmount));
             await expectTokenBalanceToEq(token, otherAccount.address, Number(tokenTransferAmount));
 
-            LOGGER.info('7. Get accounts balances before claiming reward');
-            const balanceOfAccountBefore = await ethers.provider.getBalance(account.address);
-
-            LOGGER.info('8. Claim rewards by all accounts');
-            await proposal.claimReward();
-
-            LOGGER.info('9. Get accounts balances after claiming reward');
-            const balanceOfAccountAfter = await ethers.provider.getBalance(account.address);
+            LOGGER.info('9. Expect claim reward to revert since creator already received back collateral on execute');
+            await expect(proposal.claimReward()).to.be.revertedWith('Reward not apply');
 
             LOGGER.info('10. Expected creator balance: 1 ETH collateral back (no reward)');
             expectBalanceDiffIsGte(balanceOfAccountBefore, balanceOfAccountAfter, 1);
@@ -112,24 +112,24 @@ describe('Proposal scenarios', function () {
             expect(await nftToken.balanceOf(daoAddress)).to.eq(1);
             expect(await nftToken.balanceOf(otherAccount.address)).to.eq(0);
 
-            LOGGER.info('4. Execute proposal');
+            LOGGER.info('4. Get accounts balances before claiming reward');
+            const balanceOfAccountBefore = await ethers.provider.getBalance(account.address);
+
+            LOGGER.info('5. Execute proposal');
             await proposal.executeProposal();
 
-            LOGGER.info('5. Verify proposal is executed');
+            LOGGER.info('6. Verify proposal is executed');
             await checkProposalIsExecuted(proposal, true);
 
-            LOGGER.info('6. Verify accounts NFT token balances after executing proposal: DAO lost 1 NFT, other account has 1 new NFT');
+            LOGGER.info('7. Get accounts balances after claiming reward');
+            const balanceOfAccountAfter = await ethers.provider.getBalance(account.address);
+
+            LOGGER.info('8. Verify accounts NFT token balances after executing proposal: DAO lost 1 NFT, other account has 1 new NFT');
             expect(await nftToken.balanceOf(daoAddress)).to.eq(0);
             expect(await nftToken.balanceOf(otherAccount.address)).to.eq(1);
 
-            LOGGER.info('7. Get accounts balances before claiming reward');
-            const balanceOfAccountBefore = await ethers.provider.getBalance(account.address);
-
-            LOGGER.info('8. Claim rewards by all accounts');
-            await proposal.claimReward();
-
-            LOGGER.info('9. Get accounts balances after claiming reward');
-            const balanceOfAccountAfter = await ethers.provider.getBalance(account.address);
+            LOGGER.info('9. Expect claim reward to revert since creator already received back collateral on execute');
+            await expect(proposal.claimReward()).to.be.revertedWith('Reward not apply');
 
             LOGGER.info('10. Expected creator balance: 1 ETH collateral back (no reward)');
             expectBalanceDiffIsGte(balanceOfAccountBefore, balanceOfAccountAfter, 1);
@@ -168,25 +168,25 @@ describe('Proposal scenarios', function () {
             expect(await ethers.provider.getBalance(daoAddress)).to.eq(ethers.parseEther('1'));
             const balanceOfOtherAccountBefore = await ethers.provider.getBalance(otherAccount.address);
 
-            LOGGER.info('4. Execute proposal');
+            LOGGER.info('4. Get accounts balances before executing proposal');
+            const balanceOfAccountBefore = await ethers.provider.getBalance(account.address);
+
+            LOGGER.info('5. Execute proposal');
             await proposal.executeProposal();
 
-            LOGGER.info('5. Verify proposal is executed');
+            LOGGER.info('6. Get accounts balances after claiming reward');
+            const balanceOfAccountAfter = await ethers.provider.getBalance(account.address);
+
+            LOGGER.info('7. Verify proposal is executed');
             await checkProposalIsExecuted(proposal, true);
 
-            LOGGER.info('6. Verify ETH balances of DAO and other account after executing proposal: DAO has less ETH, other account has more ETH');
+            LOGGER.info('8. Verify ETH balances of DAO and other account after executing proposal: DAO has less ETH, other account has more ETH');
             expect(await ethers.provider.getBalance(daoAddress)).to.eq(ethers.parseEther('0.7'));
             const balanceOfOtherAccountAfter = await ethers.provider.getBalance(otherAccount.address);
             expect(balanceOfOtherAccountAfter - balanceOfOtherAccountBefore).to.eq(ethers.parseEther('0.3'));
 
-            LOGGER.info('7. Get accounts balances before claiming reward');
-            const balanceOfAccountBefore = await ethers.provider.getBalance(account.address);
-
-            LOGGER.info('8. Claim rewards by all accounts');
-            await proposal.claimReward();
-
-            LOGGER.info('9. Get accounts balances after claiming reward');
-            const balanceOfAccountAfter = await ethers.provider.getBalance(account.address);
+            LOGGER.info('9. Expect claim reward to revert since creator already received back collateral on execute');
+            await expect(proposal.claimReward()).to.be.revertedWith('Reward not apply');
 
             LOGGER.info('10. Expected creator balance: 1 ETH collateral back (no reward)');
             expectBalanceDiffIsGte(balanceOfAccountBefore, balanceOfAccountAfter, 1);

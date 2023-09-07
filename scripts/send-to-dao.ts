@@ -3,9 +3,8 @@ import { Contract } from 'ethers';
 import { readFileSync } from 'fs';
 
 async function main() {
-  // TODO provide dao address
-  const daoAddress = '0x6B210B06aA3DB990cBDA03C4de389988eFf6b860';
-
+  // TODO EDIT dao address
+  const daoAddress = '0x932E9EB101Fa6CD2d856B17e83853bCCC9E9bBdB';
   const abi = ['function transfer(address recipient, uint256 amount) external returns (bool)'];
   const nftAbi = ['function createNFT(address,string) external returns (uint256)'];
 
