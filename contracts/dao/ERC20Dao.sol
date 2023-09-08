@@ -6,7 +6,7 @@ import '../pool/ERC20DaoPool.sol';
 
 contract ERC20Dao is Dao {
 
-    ERC20DaoPool public daoPool;
+    ERC20DaoPool public immutable daoPool;
 
     constructor(
         address _daoTokenAddress,

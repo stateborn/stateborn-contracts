@@ -3,11 +3,12 @@ pragma solidity ^0.8.18;
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import './DaoPool.sol';
 import '../Proposal.sol';
 
-contract NFTDaoPool is DaoPool, IERC721Receiver {
-    IERC721 public token;
+contract NFTDaoPool is DaoPool, IERC721Receiver, ReentrancyGuard {
+    IERC721 public immutable token;
     mapping(address => uint256[]) public balances;
 
     event TokensDeposited(address indexed user, address indexed tokenAddress, uint256 tokenId);
@@ -28,10 +29,10 @@ contract NFTDaoPool is DaoPool, IERC721Receiver {
         bool found = false;
         for (uint256 i = 0; i < balances[msg.sender].length; i++) {
             if (userTokenIds[i] == tokenId) {
-                token.safeTransferFrom(address(this), withdrawAddress, tokenId);
                 userTokenIds[i] = userTokenIds[userTokenIds.length - 1];
                 userTokenIds.pop();
                 found = true;
+                token.safeTransferFrom(address(this), withdrawAddress, tokenId);
                 break;
             }
         }
@@ -42,7 +43,7 @@ contract NFTDaoPool is DaoPool, IERC721Receiver {
         }
     }
 
-    function resolveProposal(address proposalAddress) public {
+    function resolveProposal(address proposalAddress) public nonReentrant {
         require(approvedProposals[proposalAddress], 'Proposal not approved');
         Proposal proposal = Proposal(proposalAddress);
         require(proposal.isEnded(), 'Proposal not ended');

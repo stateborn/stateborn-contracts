@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 
 import './pool/IDaoPool.sol';
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
 struct PollCard {
     uint256 nativeForVotes;
@@ -10,7 +11,7 @@ struct PollCard {
     uint256 tokenAgainstVotes;
 }
 
-contract Proposal {
+contract Proposal is ReentrancyGuard {
     // 32 bytes hex value
     bytes32 public immutable proposalMerkleRootHex;
     address payable public immutable sequencerAddress;
@@ -37,6 +38,7 @@ contract Proposal {
         bytes[] memory _payloads,
         address _daoPoolAddress
     ) payable {
+        require(_sequencerAddress != address(0), 'Invalid address');
         proposalMerkleRootHex = _proposalMerkleRootHex;
         sequencerAddress = _sequencerAddress;
         nativeCollateral = _nativeCollateral;
@@ -111,12 +113,13 @@ contract Proposal {
         payable(msg.sender).transfer(reward);
     }
 
-    function executeProposal() public payable isAfterChallengePeriodMod {
+    function executeProposal() public payable isAfterChallengePeriodMod nonReentrant {
         require(!executed, 'Proposal already executed');
         require(isPassed(), 'Proposal did not pass');
         executed = true;
-        for (uint256 i = 0; i < payloads.length; ++i) {
-            bytes memory payload = payloads[i];
+        bytes[] memory _payloads = payloads;
+        for (uint256 i = 0; i < _payloads.length; ++i) {
+            bytes memory payload = _payloads[i];
             (bool success,) = daoAddress.call(payload);
             require(success, 'Proposal: underlying transaction reverted');
         }

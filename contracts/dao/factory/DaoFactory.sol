@@ -7,8 +7,8 @@ abstract contract DaoFactory {
 
     Dao[] private daos;
 
-    uint256 public defaultChallengePeriodSeconds = 7 days;
-    uint256 public nativeCollateral = 1 ether;
+    uint256 public constant defaultChallengePeriodSeconds = 3 days;
+    uint256 public constant nativeCollateral = 0.1 ether;
 
     event DaoCreated(address daoAddress);
 

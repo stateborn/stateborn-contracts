@@ -6,7 +6,7 @@ import '../pool/NFTDaoPool.sol';
 
 contract NFTDao is Dao {
 
-    NFTDaoPool public daoPool;
+    NFTDaoPool public immutable daoPool;
 
     constructor(
         address _daoTokenAddress,

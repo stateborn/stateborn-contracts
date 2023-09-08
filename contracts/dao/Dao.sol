@@ -7,7 +7,6 @@ import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '../Proposal.sol';
 import '../pool/DaoPool.sol';
-import "hardhat/console.sol";
 
 abstract contract Dao is ReentrancyGuard, IERC721Receiver {
 
@@ -59,8 +58,24 @@ abstract contract Dao is ReentrancyGuard, IERC721Receiver {
     }
 
     function sendCrypto(bytes memory proposalId, address to, uint256 amount) external {
+        require(to != address(0), 'Invalid address');
         verifyProposal(proposalId);
         payable(to).transfer(amount);
+    }
+
+    function updateTokenCollateral(bytes memory proposalId, uint256 _tokenCollateral) external {
+        verifyProposal(proposalId);
+        tokenCollateral = _tokenCollateral;
+    }
+
+    function updateChallengePeriodSeconds(bytes memory proposalId, uint256 _challengePeriodSeconds) external {
+        verifyProposal(proposalId);
+        challengePeriodSeconds = _challengePeriodSeconds;
+    }
+
+    function updateNativeCollateral(bytes memory proposalId, uint256 _nativeCollateral) external {
+        verifyProposal(proposalId);
+        nativeCollateral = _nativeCollateral;
     }
 
     function verifyProposal(bytes memory proposalId) view private {

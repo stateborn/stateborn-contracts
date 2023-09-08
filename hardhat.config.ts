@@ -3,9 +3,10 @@ import { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
 const dotenv = require('dotenv');
 dotenv.config({ path: __dirname + '/.env' });
-const { COINMARKETCAP_API_KEY } = process.env;
+const { COINMARKETCAP_API_KEY, POLYGON_NODE_RPC_URL, POLYGON_PRIVATE_KEY } = process.env;
 require('solidity-coverage');
 require("hardhat-contract-sizer");
+import "hardhat-deploy";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -18,12 +19,23 @@ const config: HardhatUserConfig = {
       },
     },
   },
+  namedAccounts: {
+    deployer: {
+      default: 0,
+    },
+  },
   networks: {
     local: {
       url: 'http://127.0.0.1:7545/',
       allowUnlimitedContractSize: true,
       chainId: 1337,
     },
+    polygon: {
+      url: POLYGON_NODE_RPC_URL,
+      allowUnlimitedContractSize: true,
+      chainId: 137,
+      accounts: [POLYGON_PRIVATE_KEY],
+    }
   },
   gasReporter: {
     enabled: true,

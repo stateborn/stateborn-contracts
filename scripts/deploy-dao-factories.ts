@@ -3,8 +3,7 @@ import * as fs from 'fs';
 
 async function main() {
     const currentNetwork = network.name;
-
-    const erc20DaoFactory = await ethers.deployContract('ERC20DaoFactory', []);
+    const erc20DaoFactory = await ethers.deployContract('ERC20DaoFactory');
     await erc20DaoFactory.waitForDeployment();
     const erc20DaoFactoryAddress = await erc20DaoFactory.getAddress();
 

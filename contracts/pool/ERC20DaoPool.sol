@@ -6,7 +6,7 @@ import './DaoPool.sol';
 import '../Proposal.sol';
 
 contract ERC20DaoPool is DaoPool {
-    IERC20 public token;
+    IERC20 public immutable token;
     mapping(address => uint256) public balances;
 
     event TokensDeposited(address indexed user, address indexed tokenAddress, uint256 amount);
@@ -24,11 +24,11 @@ contract ERC20DaoPool is DaoPool {
 
     function withdraw(uint256 amount, address withdrawAddress) public hasNoActiveProposals {
         require(balances[msg.sender] >= amount, 'Insufficient balance');
-        require(token.transfer(withdrawAddress, amount), 'Transfer failed');
         balances[msg.sender] -= amount;
         if (balances[msg.sender] == 0) {
             delete balances[msg.sender];
         }
+        require(token.transfer(withdrawAddress, amount), 'Transfer failed');
         emit TokensWithdrawn(msg.sender, address(token), amount, withdrawAddress);
     }
 
