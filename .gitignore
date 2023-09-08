@@ -8,5 +8,5 @@ typechain-types
 # Hardhat files
 cache
 artifacts
-
-deployments/
+dao-factories-local.json
+dev-tokens-local.json
