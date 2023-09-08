@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 
 async function main() {
   // TODO EDIT dao address
-  const daoAddress = '0xE6135Dd153266E9001728765Cb101e3F233F0E8b';
+  const daoAddress = '0xC88Bc7C6e67cc1a2Ae9a39f2fB97509902D6672E';
   const abi = ['function transfer(address recipient, uint256 amount) external returns (bool)'];
   const nftAbi = ['function createNFT(address,string) external returns (uint256)'];
 
