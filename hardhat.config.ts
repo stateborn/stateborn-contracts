@@ -3,10 +3,11 @@ import { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
 const dotenv = require('dotenv');
 dotenv.config({ path: __dirname + '/.env' });
-const { COINMARKETCAP_API_KEY, POLYGON_NODE_RPC_URL, POLYGON_PRIVATE_KEY } = process.env;
+const { COINMARKETCAP_API_KEY, POLYGON_NODE_RPC_URL, POLYGON_PRIVATE_KEY, ETHERSCAN_API_KEY } = process.env;
 require('solidity-coverage');
 require("hardhat-contract-sizer");
 import "hardhat-deploy";
+import "@nomicfoundation/hardhat-verify";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -44,6 +45,11 @@ const config: HardhatUserConfig = {
     coinmarketcap: COINMARKETCAP_API_KEY,
     token: 'MATIC',
   },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: ETHERSCAN_API_KEY
+  }
   // typechain: {
   //   outDir: 'src/types',
   //   target: 'ethers-v6',
