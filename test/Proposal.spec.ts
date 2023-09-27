@@ -21,7 +21,7 @@ import {
     voteOnProposalWithCollateral,
     voteOnProposalWithTokenCollateral,
 } from './utils/proposal-utils';
-import { CHALLENGE_PERIOD_SECONDS, NATIVE_COLLATERAL, TOKEN_COLLATERAL } from './test-constants';
+import { CHALLENGE_PERIOD_SECONDS, NATIVE_COLLATERAL, TOKEN_COLLATERAL, EXTEND_CHALLENGE_PERIOD_SECONDS } from './test-constants';
 
 // SETUP for faster mining
 network.provider.send('evm_setIntervalMining', [500]);

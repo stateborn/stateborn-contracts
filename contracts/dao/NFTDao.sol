@@ -12,8 +12,9 @@ contract NFTDao is Dao {
         address _daoTokenAddress,
         uint256 _tokenCollateral,
         uint256 _challengePeriodSeconds,
-        uint256 _nativeCollateral
-    ) Dao(_tokenCollateral, _challengePeriodSeconds, _nativeCollateral) {
+        uint256 _nativeCollateral,
+        uint256 _extendChallengePeriodSeconds
+    ) Dao(_tokenCollateral, _challengePeriodSeconds, _nativeCollateral, _extendChallengePeriodSeconds) {
         daoPool = new NFTDaoPool(_daoTokenAddress);
         emit DaoPoolCreated(address(daoPool));
     }

@@ -2,7 +2,6 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
   approveErc20,
   deployErc20Token,
-  expectBalanceDiffIsGte,
   generateRandomIntNumberFrom1To100,
   generateRandomMerkleRoot,
   generateRandomProposalId,

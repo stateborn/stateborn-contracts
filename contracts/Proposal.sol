@@ -15,7 +15,7 @@ contract Proposal is ReentrancyGuard {
     // 32 bytes hex value
     bytes32 public immutable proposalMerkleRootHex;
     address payable public immutable sequencerAddress;
-    uint256 public immutable challengePeriodSeconds;
+    uint256 public challengePeriodSeconds;
     uint256 public immutable nativeCollateral;
     uint256 public immutable tokenCollateral;
     bytes[] private payloads;
@@ -28,6 +28,10 @@ contract Proposal is ReentrancyGuard {
 
     mapping(address => PollCard) public votes;
     bool public executed = false;
+    uint256 public extendChallengePeriodSeconds;
+
+    event ChallengePeriodExtended(uint256 extendChallengePeriodSeconds);
+    event Voted(address voter, bool voteSide, uint256 votesCount, bool isTokenVote);
 
     constructor(
         bytes32 _proposalMerkleRootHex,
@@ -36,7 +40,8 @@ contract Proposal is ReentrancyGuard {
         uint256 _tokenCollateral,
         uint256 _challengePeriodSeconds,
         bytes[] memory _payloads,
-        address _daoPoolAddress
+        address _daoPoolAddress,
+        uint256 _extendChallengePeriodSeconds
     ) payable {
         require(_sequencerAddress != address(0), 'Invalid address');
         proposalMerkleRootHex = _proposalMerkleRootHex;
@@ -48,6 +53,7 @@ contract Proposal is ReentrancyGuard {
         contractCreationTime = block.timestamp;
         daoPool = IDaoPool(_daoPoolAddress);
         daoAddress = msg.sender;
+        extendChallengePeriodSeconds = _extendChallengePeriodSeconds;
 
         uint256 votesCount = _validateCollateralAndGetVotesCount();
         PollCard storage pollCard = votes[_sequencerAddress];
@@ -56,6 +62,7 @@ contract Proposal is ReentrancyGuard {
     }
 
     function vote(bool voteSide) public payable isInChallengePeriodMod {
+        extendChallengeIfVoteInLastHour();
         uint256 votesCount = _validateCollateralAndGetVotesCount();
         PollCard storage pollCard = votes[msg.sender];
         if (voteSide) {
@@ -65,6 +72,7 @@ contract Proposal is ReentrancyGuard {
             pollCard.nativeAgainstVotes += votesCount;
             againstVotesCounter += votesCount;
         }
+        emit Voted(msg.sender, voteSide, votesCount, false);
     }
 
     function _validateCollateralAndGetVotesCount() private returns (uint256) {
@@ -74,6 +82,7 @@ contract Proposal is ReentrancyGuard {
     }
 
     function voteWithToken(bool voteSide) public isInChallengePeriodMod {
+        extendChallengeIfVoteInLastHour();
         uint256 votesCount = daoPool.balanceOf(msg.sender) / tokenCollateral;
         require(votesCount > 0, 'Token collateral too small');
         PollCard storage pollCard = votes[msg.sender];
@@ -90,6 +99,7 @@ contract Proposal is ReentrancyGuard {
         if (firstVote) {
             daoPool.vote(msg.sender, voteSide);
         }
+        emit Voted(msg.sender, voteSide, votesCount, true);
     }
 
     function claimReward() public payable isAfterChallengePeriodMod {
@@ -127,6 +137,14 @@ contract Proposal is ReentrancyGuard {
             PollCard memory pollCard = votes[sequencerAddress];
             delete votes[sequencerAddress];
             payable(sequencerAddress).transfer(pollCard.nativeForVotes * nativeCollateral);
+        }
+    }
+
+//    This eliminates the racing - voting in last hour extends the challenge period for "extendChallengePeriodSeconds" seconds
+    function extendChallengeIfVoteInLastHour() private {
+        if (block.timestamp > (contractCreationTime + challengePeriodSeconds - 1 hours)) {
+            challengePeriodSeconds += extendChallengePeriodSeconds;
+            emit ChallengePeriodExtended(extendChallengePeriodSeconds);
         }
     }
 
