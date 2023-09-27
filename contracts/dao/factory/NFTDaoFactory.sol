@@ -6,7 +6,7 @@ import "../NFTDao.sol";
 
 contract NFTDaoFactory is DaoFactory {
 
-    function initializeDao(address tokenAddress, uint256 tokenCollateral) override internal returns (Dao) {
-        return new NFTDao(tokenAddress, tokenCollateral, defaultChallengePeriodSeconds, nativeCollateral);
+    function initializeDao(address tokenAddress, uint256 tokenCollateral, uint256 extendChallengePeriodSeconds) override internal returns (Dao) {
+        return new NFTDao(tokenAddress, tokenCollateral, defaultChallengePeriodSeconds, nativeCollateral, extendChallengePeriodSeconds);
     }
 }

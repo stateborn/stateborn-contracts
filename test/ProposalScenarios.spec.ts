@@ -2,6 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers, network } from 'hardhat';
 import {
+    deployErc20Dao,
     deployNftToken,
     expectBalanceDiffIsGte,
     expectBalanceNotChanged,
@@ -9,7 +10,7 @@ import {
     generateRandomIntNumberFrom1To100,
     generateRandomMerkleRoot,
     generateRandomProposalId,
-    initializeErc20TokenAndDaoFixture,
+    initializeErc20TokenAndDaoFixture, sleep, transferERC20TokensToAddress,
     waitForProposalToEnd,
 } from './utils/utils';
 import {
@@ -21,6 +22,7 @@ import {
 } from './utils/proposal-utils';
 import { LOGGER } from './utils/pino-logger-service';
 import { ERC721Development, Proposal } from '../typechain-types';
+import { CHALLENGE_PERIOD_SECONDS } from './test-constants';
 
 // SETUP for faster mining
 network.provider.send('evm_setIntervalMining', [500]);
@@ -418,6 +420,52 @@ describe('Proposal scenarios', function () {
             LOGGER.info('9. Expected proposal balance is 0');
             const balanceOfProposal = await ethers.provider.getBalance(proposalAddress);
             expect(balanceOfProposal).to.be.eq(0);
+        });
+    });
+
+
+    describe('Proposal challenge period extension scenario', function () {
+        it('should extend voting period when vote done in last voting hour', async function () {
+            const {token, account, otherAccount} = await loadFixture(initializeErc20TokenAndDaoFixture);
+            const tokenAddress = await token.getAddress();
+            const extendChallengePeriodSeconds = 1000;
+            const { dao, ERC20DaoPool } = await deployErc20Dao(tokenAddress, CHALLENGE_PERIOD_SECONDS, extendChallengePeriodSeconds);
+            const daoAddress = await dao.getAddress();
+            await transferERC20TokensToAddress(token, daoAddress, 1000);
+            const tokenTransferAmount = generateRandomIntNumberFrom1To100();
+
+            LOGGER.info('1. Create send ERC20 tokens proposal');
+            const proposal = await createSendErc20Proposal(
+                dao,
+                tokenAddress,
+                generateRandomProposalId(),
+                generateRandomMerkleRoot(),
+                otherAccount.address,
+                tokenTransferAmount
+            );
+
+            LOGGER.info('2. Verify proposal is not yet ended');
+            expect(await proposal.isEnded(), 'Expecting isEnded correct').to.be.false;
+            expect(await proposal.challengePeriodSeconds(), 'Expecting challengePeriodSeconds correct').to.eq(CHALLENGE_PERIOD_SECONDS);
+
+            LOGGER.info('3. Vote on proposal');
+            await voteOnProposalWithCollateral(proposal, false, 1);
+
+            LOGGER.info('4. Verify proposal challenge period seconds extended');
+            expect(await proposal.isEnded(), 'Expecting isEnded correct').to.be.false;
+            const challengePeriodAfterFirstVote = await proposal.challengePeriodSeconds();
+            expect(challengePeriodAfterFirstVote, 'Expecting challengePeriodSeconds correct').to.eq(CHALLENGE_PERIOD_SECONDS + extendChallengePeriodSeconds);
+
+            await sleep(CHALLENGE_PERIOD_SECONDS);
+            LOGGER.info('5. Verify proposal not ended after sleeping initial challenge period seconds');
+            expect(await proposal.isEnded(), 'Expecting isEnded correct').to.be.false;
+
+            LOGGER.info('6. Vote on proposal again to verify voting is possible');
+            await voteOnProposalWithCollateral(proposal, false, 1);
+
+            LOGGER.info('7. Verify once again proposal challenge period seconds extended');
+            expect(await proposal.isEnded(), 'Expecting isEnded correct').to.be.false;
+            expect(await proposal.challengePeriodSeconds(), 'Expecting challengePeriodSeconds correct').to.eq(Number(challengePeriodAfterFirstVote) + extendChallengePeriodSeconds);
         });
     });
 });

@@ -3,7 +3,14 @@ import { expect } from 'chai';
 import { faker } from '@faker-js/faker';
 import { LOGGER } from './pino-logger-service';
 import { ERC20Dao, ERC20DaoPool, ERC721, ERC721Development, IERC20, NFTDao, NFTDaoPool, Proposal } from '../../typechain-types';
-import { CHALLENGE_PERIOD_SECONDS, ERC_20_DECIMALS, NATIVE_COLLATERAL, TOKEN_COLLATERAL, TOKEN_NFT_COLLATERAL } from '../test-constants';
+import {
+  CHALLENGE_PERIOD_SECONDS,
+  ERC_20_DECIMALS,
+  EXTEND_CHALLENGE_PERIOD_SECONDS,
+  NATIVE_COLLATERAL,
+  TOKEN_COLLATERAL,
+  TOKEN_NFT_COLLATERAL
+} from '../test-constants';
 import { depositTokensToPool } from './dao-pool-utils';
 
 export async function deployErc20Token(): Promise<IERC20> {
@@ -27,8 +34,8 @@ export async function deployNftToken(): Promise<ERC721> {
   return token as ERC721;
 }
 
-export async function deployErc20Dao(tokenAddress: string, challengePeriodSeconds: number): Promise<{ dao: ERC20Dao; ERC20DaoPool: ERC20DaoPool }> {
-  const dao = (await ethers.deployContract('ERC20Dao', [tokenAddress, TOKEN_COLLATERAL, challengePeriodSeconds, NATIVE_COLLATERAL])) as ERC20Dao;
+export async function deployErc20Dao(tokenAddress: string, challengePeriodSeconds: number, extendChallengePeriodSeconds: number = EXTEND_CHALLENGE_PERIOD_SECONDS): Promise<{ dao: ERC20Dao; ERC20DaoPool: ERC20DaoPool }> {
+  const dao = (await ethers.deployContract('ERC20Dao', [tokenAddress, TOKEN_COLLATERAL, challengePeriodSeconds, NATIVE_COLLATERAL, extendChallengePeriodSeconds])) as ERC20Dao;
   await dao.waitForDeployment();
   const result = await dao.deploymentTransaction().wait();
   const ERC20DaoPool = (await ethers.getContractAt(
@@ -42,7 +49,7 @@ export async function deployErc20Dao(tokenAddress: string, challengePeriodSecond
 }
 
 export async function deployNftDao(tokenAddress: string, challengePeriodSeconds: number): Promise<{ dao: NFTDao; NFTDaoPool: NFTDaoPool }> {
-  const dao = (await ethers.deployContract('NFTDao', [tokenAddress, TOKEN_NFT_COLLATERAL, challengePeriodSeconds, NATIVE_COLLATERAL])) as NFTDao;
+  const dao = (await ethers.deployContract('NFTDao', [tokenAddress, TOKEN_NFT_COLLATERAL, challengePeriodSeconds, NATIVE_COLLATERAL, EXTEND_CHALLENGE_PERIOD_SECONDS])) as NFTDao;
   await dao.waitForDeployment();
   const result = await dao.deploymentTransaction().wait();
   const NFTDaoPool = (await ethers.getContractAt(
