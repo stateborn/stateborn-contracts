@@ -56,8 +56,7 @@ export async function createProposalWithTokensTx(
   // @dev so i replaced it with this workaround of getting events from tx
   const result = await tx.wait();
   LOGGER.debug(`Created DAO proposal`);
-  // @ts-ignore
-  return (await ethers.getContractAt('Proposal', result.logs[0].args.proposalAddress)) as Proposal;
+  return (await ethers.getContractAt('Proposal', result.logs[0].address)) as Proposal;
 }
 
 
@@ -139,4 +138,4 @@ export const expectProposalVoteResults = (
   expect(vote.nativeAgainstVotes).to.eq(nativeAgainstVotes);
   expect(vote.tokenForVotes).to.eq(tokenForVotes);
   expect(vote.tokenAgainstVotes).to.eq(tokenAgainstVotes);
-};
+}
