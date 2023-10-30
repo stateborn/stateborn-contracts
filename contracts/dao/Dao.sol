@@ -16,9 +16,17 @@ abstract contract Dao is ReentrancyGuard, IERC721Receiver {
     uint256 public nativeCollateral;
     uint256 public extendChallengePeriodSeconds;
 
-    event ProposalCreated(bytes proposalId, address proposalAddress);
+    event ProposalCreated(
+        bytes proposalId,
+        address proposalAddress,
+        bytes32 _proposalMerkleRootHex,
+        address payable _sequencerAddress,
+        uint256 _nativeCollateral,
+        uint256 _tokenCollateral,
+        uint256 _challengePeriodSeconds,
+        bytes[] _payloads,
+        uint256 _extendChallengePeriodSeconds);
     event DaoPoolCreated(address daoPoolAddress);
-
     function getDaoPool() internal virtual returns (DaoPool);
 
     // _tokenCollateral - should already include decimals
@@ -47,7 +55,7 @@ abstract contract Dao is ReentrancyGuard, IERC721Receiver {
         );
         proposals[_proposalId] = proposal;
         getDaoPool().approveProposal(address(proposal));
-        emit ProposalCreated(_proposalId, address(proposal));
+        emit ProposalCreated(_proposalId, address(proposal), _proposalMerkleRoot, payable(msg.sender), nativeCollateral, tokenCollateral, challengePeriodSeconds, _payloads, extendChallengePeriodSeconds);
     }
 
     function sendErc20(bytes memory proposalId, address tokenAddress, address to, uint256 amount) external {

@@ -32,6 +32,8 @@ contract Proposal is ReentrancyGuard {
 
     event ChallengePeriodExtended(uint256 extendChallengePeriodSeconds);
     event Voted(address voter, bool voteSide, uint256 votesCount, bool isTokenVote);
+    event Executed(address executor);
+    event RewardClaimed(address claimer, uint256 reward);
 
     constructor(
         bytes32 _proposalMerkleRootHex,
@@ -59,6 +61,7 @@ contract Proposal is ReentrancyGuard {
         PollCard storage pollCard = votes[_sequencerAddress];
         pollCard.nativeForVotes = votesCount;
         forVotesCounter = votesCount;
+        emit Voted(_sequencerAddress, true, votesCount, false);
     }
 
     function vote(bool voteSide) public payable isInChallengePeriodMod {
@@ -121,6 +124,7 @@ contract Proposal is ReentrancyGuard {
         }
         delete votes[msg.sender];
         payable(msg.sender).transfer(reward);
+        emit RewardClaimed(msg.sender, reward);
     }
 
     function executeProposal() public payable isAfterChallengePeriodMod nonReentrant {
@@ -138,6 +142,7 @@ contract Proposal is ReentrancyGuard {
             delete votes[sequencerAddress];
             payable(sequencerAddress).transfer(pollCard.nativeForVotes * nativeCollateral);
         }
+        emit Executed(msg.sender);
     }
 
 //    This eliminates the racing - voting in last hour extends the challenge period for "extendChallengePeriodSeconds" seconds
